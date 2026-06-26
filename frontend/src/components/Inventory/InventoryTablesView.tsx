@@ -10,8 +10,143 @@ import { ReportGenerator } from '../Reports/ReportGenerator';
 import { motion } from 'framer-motion';
 import { AlertCircle, FileSpreadsheet, Search, Check, RefreshCw } from 'lucide-react';
 
+// Determinar color de celda TOTAL basado en reglas por categoría (Cajas = 50, otros = 10)
+const getTotalCellStyle = (total: number, category: string) => {
+  const isCaja = category.startsWith('cajas');
+  const suficiente = isCaja ? 50 : 10;
+  const medio = isCaja ? 30 : 5;
+  const bajo = isCaja ? 15 : 3;
+
+  if (total >= suficiente) {
+    return 'bg-emerald-50 text-emerald-700 border border-emerald-100 font-semibold px-2 py-1 rounded-lg inline-block text-center min-w-[70px]';
+  } else if (total >= medio) {
+    return 'bg-amber-50 text-amber-700 border border-amber-100 font-semibold px-2 py-1 rounded-lg inline-block text-center min-w-[70px]';
+  } else if (total >= bajo) {
+    return 'bg-orange-50 text-orange-700 border border-orange-100 font-semibold px-2 py-1 rounded-lg inline-block text-center min-w-[70px]';
+  } else {
+    return 'bg-red-50 text-red-600 border border-red-200 font-bold px-2 py-1 rounded-lg inline-block text-center min-w-[70px] animate-pulse shadow-sm shadow-red-100';
+  }
+};
+
+// Estilos de requerimiento (badges)
+const getReqBadge = (req: string) => {
+  if (!req) return <span className="text-gray-400 text-xs italic">-</span>;
+
+  const lowerReq = req.toLowerCase();
+
+  if (lowerReq.includes('urgente') || lowerReq.includes('crítico')) {
+    return (
+      <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-semibold animate-pulse">
+        <AlertCircle className="w-3.5 h-3.5" />
+        {req}
+      </span>
+    );
+  }
+
+  if (lowerReq.includes('comprar')) {
+    return (
+      <span className="inline-flex items-center bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs font-semibold animate-pulse">
+        {req}
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-xs font-semibold">
+      {req}
+    </span>
+  );
+};
+
+// Componente Input numérico para edición reactiva
+const InlineNumberInput: React.FC<{
+  item: InventoryItem;
+  field: keyof InventoryItem;
+  placeholder?: string;
+}> = ({ item, field, placeholder = '0' }) => {
+  const { updateItem } = useInventory();
+  const [val, setVal] = useState<string>(String(item[field] ?? '0'));
+  const [saved, setSaved] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    setVal(String(item[field] ?? '0'));
+  }, [item[field]]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputVal = e.target.value;
+    if (inputVal === '' || /^\d*\.?\d*$/.test(inputVal)) {
+      setVal(inputVal); // Solo cambiar el estado local (no actualizar el servidor en cada tecla para mantener foco)
+    }
+  };
+
+  const handleBlur = () => {
+    const parsed = val === '' ? 0 : parseFloat(val);
+    if (parsed !== parseFloat(String(item[field] ?? '0'))) {
+      updateItem(item.id, { [field]: parsed }).then(() => {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 800);
+      });
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLInputElement).blur();
+    }
+  };
+
+  return (
+    <div className="relative flex items-center">
+      <input
+        type="text"
+        value={val === '0' && field !== 'comentarios' ? '' : val}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        className="w-16 md:w-20 bg-gray-50 border border-gray-200 rounded-lg py-1 px-2 text-center text-sm font-medium text-gray-800 focus:bg-white focus:border-red-500 focus:outline-none transition-all"
+      />
+      {saved && (
+        <span className="absolute -right-4 text-emerald-500 animate-fade-out">
+          <Check className="w-3.5 h-3.5" />
+        </span>
+      )}
+    </div>
+  );
+};
+
+// Componente Input texto para comentarios
+const InlineTextInput: React.FC<{
+  item: InventoryItem;
+  field: keyof InventoryItem;
+}> = ({ item, field }) => {
+  const { updateItem } = useInventory();
+  const [val, setVal] = useState<string>(String(item[field] ?? ''));
+
+  React.useEffect(() => {
+    setVal(String(item[field] ?? ''));
+  }, [item[field]]);
+
+  const handleBlur = () => {
+    if (val !== String(item[field] ?? '')) {
+      updateItem(item.id, { [field]: val });
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      value={val}
+      onChange={(e) => setVal(e.target.value)}
+      onBlur={handleBlur}
+      placeholder="Comentario..."
+      className="w-full bg-transparent border-b border-transparent hover:border-gray-200 focus:border-red-500 focus:outline-none py-0.5 px-1 text-sm text-gray-600 transition-colors"
+    />
+  );
+};
+
 export const InventoryTablesView: React.FC = () => {
-  const { inventory, updateItem, loading, fetchData } = useInventory();
+  const { inventory, loading, fetchData } = useInventory();
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   // Filtrar items por categoría y búsqueda
@@ -24,137 +159,6 @@ export const InventoryTablesView: React.FC = () => {
       );
     }
     return items;
-  };
-
-  // Determinar color de celda TOTAL basado en reglas por categoría (Cajas = 50, otros = 10)
-  const getTotalCellStyle = (total: number, category: string) => {
-    const isCaja = category.startsWith('cajas');
-    const suficiente = isCaja ? 50 : 10;
-    const medio = isCaja ? 30 : 5;
-    const bajo = isCaja ? 15 : 3;
-
-    if (total >= suficiente) {
-      return 'bg-emerald-50 text-emerald-700 border border-emerald-100 font-semibold px-2 py-1 rounded-lg inline-block text-center min-w-[70px]';
-    } else if (total >= medio) {
-      return 'bg-amber-50 text-amber-700 border border-amber-100 font-semibold px-2 py-1 rounded-lg inline-block text-center min-w-[70px]';
-    } else if (total >= bajo) {
-      return 'bg-orange-50 text-orange-700 border border-orange-100 font-semibold px-2 py-1 rounded-lg inline-block text-center min-w-[70px]';
-    } else {
-      return 'bg-red-50 text-red-600 border border-red-200 font-bold px-2 py-1 rounded-lg inline-block text-center min-w-[70px] animate-pulse shadow-sm shadow-red-100';
-    }
-  };
-
-  // Componente Input numérico para edición reactiva
-  const InlineNumberInput: React.FC<{
-    item: InventoryItem;
-    field: keyof InventoryItem;
-    placeholder?: string;
-  }> = ({ item, field, placeholder = '0' }) => {
-    const [val, setVal] = useState<string>(String(item[field] ?? '0'));
-    const [saved, setSaved] = useState<boolean>(false);
-
-    React.useEffect(() => {
-      setVal(String(item[field] ?? '0'));
-    }, [item[field]]);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const inputVal = e.target.value;
-      if (inputVal === '' || /^\d*\.?\d*$/.test(inputVal)) {
-        setVal(inputVal);
-        const parsed = inputVal === '' ? 0 : parseFloat(inputVal);
-        updateItem(item.id, { [field]: parsed });
-      }
-    };
-
-    const handleBlur = () => {
-      const parsed = val === '' ? 0 : parseFloat(val);
-      updateItem(item.id, { [field]: parsed }).then(() => {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 800);
-      });
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-        (e.target as HTMLInputElement).blur();
-      }
-    };
-
-    return (
-      <div className="relative flex items-center">
-        <input
-          type="text"
-          value={val === '0' && field !== 'comentarios' ? '' : val}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          className="w-16 md:w-20 bg-gray-50 border border-gray-200 rounded-lg py-1 px-2 text-center text-sm font-medium text-gray-800 focus:bg-white focus:border-red-500 focus:outline-none transition-all"
-        />
-        {saved && (
-          <span className="absolute -right-4 text-emerald-500 animate-fade-out">
-            <Check className="w-3.5 h-3.5" />
-          </span>
-        )}
-      </div>
-    );
-  };
-
-  // Componente Input texto para comentarios
-  const InlineTextInput: React.FC<{
-    item: InventoryItem;
-    field: keyof InventoryItem;
-  }> = ({ item, field }) => {
-    const [val, setVal] = useState<string>(String(item[field] ?? ''));
-
-    React.useEffect(() => {
-      setVal(String(item[field] ?? ''));
-    }, [item[field]]);
-
-    const handleBlur = () => {
-      updateItem(item.id, { [field]: val });
-    };
-
-    return (
-      <input
-        type="text"
-        value={val}
-        onChange={(e) => setVal(e.target.value)}
-        onBlur={handleBlur}
-        placeholder="Comentario..."
-        className="w-full bg-transparent border-b border-transparent hover:border-gray-200 focus:border-red-500 focus:outline-none py-0.5 px-1 text-sm text-gray-600 transition-colors"
-      />
-    );
-  };
-
-  // Estilos de requerimiento (badges)
-  const getReqBadge = (req: string) => {
-    if (!req) return <span className="text-gray-400 text-xs italic">-</span>;
-
-    const lowerReq = req.toLowerCase();
-
-    if (lowerReq.includes('urgente') || lowerReq.includes('crítico')) {
-      return (
-        <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-semibold animate-pulse">
-          <AlertCircle className="w-3 h-3" />
-          {req}
-        </span>
-      );
-    }
-
-    if (lowerReq.includes('comprar')) {
-      return (
-        <span className="inline-flex items-center bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs font-semibold animate-pulse">
-          {req}
-        </span>
-      );
-    }
-
-    return (
-      <span className="inline-flex items-center bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-xs font-semibold">
-        {req}
-      </span>
-    );
   };
 
   // Obtener items por secciones
