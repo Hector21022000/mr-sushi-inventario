@@ -6,7 +6,7 @@
 
 import React, { useRef, useState } from 'react';
 import { useInventory } from '../../context/InventoryContext';
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 import * as XLSX from 'xlsx';
 import axios from 'axios';
