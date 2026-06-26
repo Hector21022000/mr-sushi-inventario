@@ -207,6 +207,11 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     let sinStock = 0;
 
     inventory.forEach((item) => {
+      // Ignorar categorías que no requieren alertas de reposición (salseros y acevichado)
+      if (item.category === 'salseros' || item.category === 'acevichado') {
+        return;
+      }
+
       const totalVal = item.total;
       const isCaja = item.category.startsWith('cajas');
       

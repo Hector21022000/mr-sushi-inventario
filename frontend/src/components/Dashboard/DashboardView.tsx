@@ -40,9 +40,14 @@ export const DashboardView: React.FC = () => {
     { name: 'Sin Stock (0)', value: stats.sinStock, color: '#7F1D1D' }       // Rojo oscuro / Negro
   ].filter(item => item.value > 0); // Solo mostrar los que tengan cantidad > 0
 
-  // Obtener los 10 productos con menor stock (excluyendo categorías de cajas que pueden ser diferentes en escalas)
+  // Obtener los productos con menor stock (excluyendo cajas, salseros y acevichados que no requieren alertas de reposición)
   const lowestStockData = [...inventory]
-    .filter(item => item.category !== 'cajas_1' && item.category !== 'cajas_2')
+    .filter(item => 
+      item.category !== 'cajas_1' && 
+      item.category !== 'cajas_2' && 
+      item.category !== 'salseros' && 
+      item.category !== 'acevichado'
+    )
     .sort((a, b) => a.total - b.total)
     .slice(0, 8)
     .map(item => ({
