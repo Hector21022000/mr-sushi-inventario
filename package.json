@@ -1,0 +1,13 @@
+{
+  "_comment": "Qué hace el archivo: Monorepo package.json para facilitar despliegue unificado de frontend y backend. Fecha de última modificación: 2026-06-26. Autor: Antigravity",
+  "name": "mr-sushi-monorepo",
+  "version": "1.0.0",
+  "description": "Monorepo para el Sistema Inteligente de Control de Inventario MR·SUSHI",
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "build:frontend": "npm run build --prefix frontend",
+    "build:backend": "npm run build --prefix backend",
+    "build": "npm run build:frontend && npm run build:backend",
+    "start": "npm run start --prefix backend"
+  }
+}

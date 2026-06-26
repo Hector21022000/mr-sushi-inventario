@@ -1,0 +1,14 @@
+# Qué hace el archivo: Archivo .gitignore para excluir archivos temporales y dependencias.
+# Fecha de última modificación: 2026-06-26
+# Nombre del autor: Antigravity
+
+node_modules/
+**/node_modules/
+**/dist/
+.env*
+.env.local
+*.sqlite
+Reportes/
+.DS_Store
+.agents/
+skills-lock.json
