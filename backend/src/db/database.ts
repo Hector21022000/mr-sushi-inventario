@@ -261,8 +261,7 @@ export function calculateRequerimiento(
     if (stockReference >= 50) {
       return 'No requiere cajas';
     } else if (stockReference > 0) {
-      const diff = 50 - stockReference;
-      return `Requiere ${diff} caja${diff > 1 ? 's' : ''}`;
+      return 'Se requiere cajas para un stock adecuado';
     } else {
       return 'URGENTE. Sin cajas. Comprar inmediatamente.';
     }
