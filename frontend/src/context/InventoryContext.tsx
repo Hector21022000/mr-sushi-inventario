@@ -143,7 +143,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             const ref = total;
 
             if (merged.category === 'cajas_1' || merged.category === 'cajas_2') {
-              req = ref >= 50 ? 'No requiere cajas' : ref > 0 ? `Requiere ${50 - ref} cajas` : 'URGENTE. Sin cajas. Comprar inmediatamente.';
+              req = ref >= 50 ? 'No requiere cajas' : ref > 0 ? 'Se requiere cajas para un stock adecuado' : 'URGENTE. Sin cajas. Comprar inmediatamente.';
             } else if (merged.category === 'gaseosas') {
               if (ref <= 2) {
                 const ln = merged.name.toLowerCase();

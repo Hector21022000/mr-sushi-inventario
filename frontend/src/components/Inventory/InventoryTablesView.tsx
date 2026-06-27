@@ -67,10 +67,13 @@ const InlineNumberInput: React.FC<{
   const { updateItem } = useInventory();
   const [val, setVal] = useState<string>(String(item[field] ?? '0'));
   const [saved, setSaved] = useState<boolean>(false);
+  const [isFocused, setIsFocused] = useState<boolean>(false);
 
   React.useEffect(() => {
-    setVal(String(item[field] ?? '0'));
-  }, [item[field]]);
+    if (!isFocused) {
+      setVal(String(item[field] ?? '0'));
+    }
+  }, [item[field], isFocused]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputVal = e.target.value;
@@ -80,6 +83,7 @@ const InlineNumberInput: React.FC<{
   };
 
   const handleBlur = () => {
+    setIsFocused(false);
     const parsed = val === '' ? 0 : parseFloat(val);
     if (parsed !== parseFloat(String(item[field] ?? '0'))) {
       updateItem(item.id, { [field]: parsed }).then(() => {
@@ -101,6 +105,7 @@ const InlineNumberInput: React.FC<{
         type="text"
         value={val === '0' && field !== 'comentarios' ? '' : val}
         onChange={handleChange}
+        onFocus={() => setIsFocused(true)}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
@@ -122,12 +127,16 @@ const InlineTextInput: React.FC<{
 }> = ({ item, field }) => {
   const { updateItem } = useInventory();
   const [val, setVal] = useState<string>(String(item[field] ?? ''));
+  const [isFocused, setIsFocused] = useState<boolean>(false);
 
   React.useEffect(() => {
-    setVal(String(item[field] ?? ''));
-  }, [item[field]]);
+    if (!isFocused) {
+      setVal(String(item[field] ?? ''));
+    }
+  }, [item[field], isFocused]);
 
   const handleBlur = () => {
+    setIsFocused(false);
     if (val !== String(item[field] ?? '')) {
       updateItem(item.id, { [field]: val });
     }
@@ -138,6 +147,7 @@ const InlineTextInput: React.FC<{
       type="text"
       value={val}
       onChange={(e) => setVal(e.target.value)}
+      onFocus={() => setIsFocused(true)}
       onBlur={handleBlur}
       placeholder="Comentario..."
       className="w-full bg-transparent border-b border-transparent hover:border-gray-200 focus:border-red-500 focus:outline-none py-0.5 px-1 text-sm text-gray-600 transition-colors"
