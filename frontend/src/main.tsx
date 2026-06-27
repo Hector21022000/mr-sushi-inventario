@@ -7,6 +7,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AuthProvider } from './context/AuthContext'
+import { SettingsProvider } from './context/SettingsContext'
 import { InventoryProvider } from './context/InventoryContext'
 import './index.css'
 import App from './App.tsx'
@@ -14,9 +15,11 @@ import App from './App.tsx'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
-      <InventoryProvider>
-        <App />
-      </InventoryProvider>
+      <SettingsProvider>
+        <InventoryProvider>
+          <App />
+        </InventoryProvider>
+      </SettingsProvider>
     </AuthProvider>
   </StrictMode>,
 )

@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { getDb } from '../db/database';
 import { AuthRequest } from '../middleware/auth';
+import { logAudit } from '../services/auditService';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret-mr-sushi-2026';
 const SUPERADMIN_CODE = '7573';
@@ -145,6 +146,16 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
       ]
     );
 
+    await logAudit(req, 'UPDATE_USER', {
+      targetUserId: id,
+      changes: {
+        role: role !== undefined ? role : targetUser.role,
+        status: status !== undefined ? status : targetUser.status,
+        area: area !== undefined ? area : targetUser.area,
+        turno: turno !== undefined ? turno : targetUser.turno,
+      }
+    });
+
     res.json({ message: 'Usuario actualizado exitosamente' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -172,6 +183,8 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
     }
 
     await db.run('DELETE FROM users WHERE id = ?', [id]);
+    await logAudit(req, 'DELETE_USER', { targetUserId: id, deletedRole: targetUser.role });
+    
     res.json({ message: 'Usuario eliminado' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

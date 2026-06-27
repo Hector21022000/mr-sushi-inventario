@@ -15,6 +15,9 @@ import { HistoryCalendarView } from './components/History/HistoryCalendarView';
 import { LoginView } from './components/Auth/LoginView';
 import { RegisterView } from './components/Auth/RegisterView';
 import { UserManagement } from './components/Admin/UserManagement';
+import { FormatManagementView } from './components/Admin/FormatManagementView';
+import { SystemSettingsView } from './components/Admin/SystemSettingsView';
+import { AuditLogView } from './components/Admin/AuditLogView';
 import { CriticalSidebarPanel } from './components/Sidebar/CriticalSidebarPanel';
 import { RealTimeClockPanel } from './components/ui/RealTimeClockPanel';
 import { 
@@ -29,21 +32,25 @@ import {
   Calendar,
   LogOut,
   Users,
-  CheckCircle2
+  CheckCircle2,
+  Settings,
+  ShieldCheck
 } from 'lucide-react';
 import logoImg from './assets/logo.png';
+import { useSettings } from './context/SettingsContext';
 
 const AppContent: React.FC = () => {
-  const { user, logout, loading } = useAuth();
+  const { user, logout, loading: authLoading } = useAuth();
   const { activeArea, switchArea, closeInventory, isClosedToday, criticalItems, error } = useInventory();
+  const { settings, loading: settingsLoading } = useSettings();
   
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [criticalPanelOpen, setCriticalPanelOpen] = useState<boolean>(false);
   const [showRegister, setShowRegister] = useState<boolean>(false);
 
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
+  if (authLoading || settingsLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Cargando plataforma...</div>;
   }
 
   // Flujo de Autenticación
@@ -56,16 +63,33 @@ const AppContent: React.FC = () => {
   const isAdmin = user.role === 'admin';
 
   let menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'inventory', label: 'Inventario General', icon: FileSpreadsheet },
-    { id: 'required_items', label: 'Lista de Compras', icon: ShoppingCart },
-    { id: 'history_calendar', label: 'Historial de Inventarios', icon: Calendar },
-    { id: 'history', label: 'Auditoría de Cambios', icon: History }
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }
   ];
+
+  // Reglas de visibilidad para inventarios
+  if (!user.area || (user.area === 'Armado') || isSuperadmin || isAdmin) {
+    menuItems.push({ id: 'inventory', label: 'Inventario General', icon: FileSpreadsheet });
+  }
+
+  // Filtrado condicional según settings (aplica para todos)
+  const isReportsEnabled = settings['module_reports_enabled'] !== 'false';
+  
+  if (isReportsEnabled) {
+    menuItems.push({ id: 'required_items', label: 'Lista de Compras', icon: ShoppingCart });
+    menuItems.push({ id: 'history_calendar', label: 'Historial de Inventarios', icon: Calendar });
+    menuItems.push({ id: 'history', label: 'Auditoría de Cambios', icon: History });
+  }
 
   // Si es Superadmin o Admin, mostrar panel de gestión de usuarios
   if (isSuperadmin || isAdmin) {
     menuItems.push({ id: 'users', label: 'Gestión de Usuarios', icon: Users });
+  }
+
+  // SOLO para Superadmin
+  if (isSuperadmin) {
+    menuItems.push({ id: 'formats', label: 'Gestión de Formatos', icon: FileSpreadsheet });
+    menuItems.push({ id: 'settings', label: 'Configuración', icon: Settings });
+    menuItems.push({ id: 'audit_log', label: 'Seguridad', icon: ShieldCheck });
   }
 
   // Filtrado de reportes e historial para trabajadores (opcional, pero la seguridad ya está en backend)
@@ -210,6 +234,10 @@ const AppContent: React.FC = () => {
               {activeTab === 'required_items' && 'Productos Requeridos (Compras)'}
               {activeTab === 'history_calendar' && 'Historial de Inventarios'}
               {activeTab === 'history' && 'Auditoría de Cambios'}
+              {activeTab === 'users' && 'Gestión de Usuarios'}
+              {activeTab === 'formats' && 'Gestión de Formatos'}
+              {activeTab === 'settings' && 'Configuración Global'}
+              {activeTab === 'audit_log' && 'Auditoría de Seguridad'}
             </h2>
             {/* Logo en Móviles en la Cabecera */}
             <div className="flex lg:hidden items-center gap-2">
@@ -289,6 +317,9 @@ const AppContent: React.FC = () => {
           {activeTab === 'history_calendar' && <HistoryCalendarView />}
           {activeTab === 'history' && <AuditHistoryView />}
           {activeTab === 'users' && (isSuperadmin || isAdmin) && <UserManagement />}
+          {activeTab === 'formats' && isSuperadmin && <FormatManagementView />}
+          {activeTab === 'settings' && isSuperadmin && <SystemSettingsView />}
+          {activeTab === 'audit_log' && isSuperadmin && <AuditLogView />}
         </main>
       </div>
 

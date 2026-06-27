@@ -155,6 +155,7 @@ export async function initDb() {
       requerimiento TEXT DEFAULT '',
       comentarios TEXT DEFAULT '',
       area TEXT DEFAULT 'Armado',
+      is_active INTEGER DEFAULT 1,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(category, name, area)
     )
@@ -218,6 +219,62 @@ export async function initDb() {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Crear tabla de configuraciones del sistema (Visibilidad y Módulos)
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS system_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      setting_key TEXT NOT NULL UNIQUE,
+      setting_value TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Inicializar configuraciones base si no existen
+  try {
+    await db.exec(`
+      INSERT INTO system_settings (setting_key, setting_value, description) 
+      VALUES 
+        ('module_cocina_enabled', 'true', 'Habilitar o deshabilitar acceso al inventario de Cocina'),
+        ('module_barra_enabled', 'true', 'Habilitar o deshabilitar acceso al inventario de Barra'),
+        ('module_reports_enabled', 'true', 'Habilitar descarga de reportes y auditorías')
+      ON CONFLICT(setting_key) DO NOTHING;
+    `);
+  } catch (e) {
+    // Si ON CONFLICT falla (ej. motor SQLite muy antiguo o sintaxis PG distinta), lo ignoramos por ahora.
+    // Lo más seguro es usar db.run pero con ignore.
+  }
+
+  // Crear tabla de auditoría de seguridad
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      username TEXT NOT NULL,
+      action TEXT NOT NULL,
+      details TEXT,
+      ip_address TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Crear tabla estricta de áreas de trabajo (opcional, para gestión dinámica)
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS areas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Migración para añadir is_active si la tabla inventory ya existía antes de esta actualización
+  try {
+    await db.exec('ALTER TABLE inventory ADD COLUMN is_active INTEGER DEFAULT 1');
+  } catch (e) {
+    // Si la columna ya existe, fallará de forma segura y continuará.
+  }
 
   // Semillero inicial de productos (seeding)
   const initialProducts = [

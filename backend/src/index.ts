@@ -10,6 +10,9 @@ import dotenv from 'dotenv';
 import path from 'path';
 import apiRoutes from './routes/api';
 import authRoutes from './routes/auth';
+import inventoryRoutes from './routes/inventory';
+import formatRoutes from './routes/formats';
+import settingsRoutes from './routes/settings';
 import { initDb } from './db/database';
 
 // Cargar configuración local de dotenv (de la carpeta actual y de la raíz del monorepo si existe)
@@ -25,6 +28,9 @@ app.use(express.json());
 
 // Servir la API
 app.use('/api/auth', authRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/formats', formatRoutes);
+app.use('/api/settings', settingsRoutes);
 app.use('/api', apiRoutes);
 
 // Endpoint de prueba de salud
