@@ -1,6 +1,6 @@
 /**
  * Qué hace el archivo: Inicializa y gestiona la base de datos híbrida (PostgreSQL en producción y SQLite en desarrollo local).
- * Fecha de última modificación: 2026-06-26
+ * Fecha de última modificación: 2026-06-27
  * Nombre del autor: Antigravity
  */
 
@@ -289,6 +289,30 @@ export async function initDb() {
   
   try {
     await db.exec(`ALTER TABLE inventories_history ADD COLUMN responsables TEXT DEFAULT '{}'`);
+  } catch (e) {
+    // Falla silenciosamente si la columna ya existe
+  }
+
+  try {
+    await db.exec(`ALTER TABLE inventories_history ADD COLUMN area TEXT DEFAULT 'Armado'`);
+  } catch (e) {
+    // Falla silenciosamente si la columna ya existe
+  }
+
+  try {
+    await db.exec(`ALTER TABLE inventory ADD COLUMN area TEXT DEFAULT 'Armado'`);
+  } catch (e) {
+    // Falla silenciosamente si la columna ya existe
+  }
+
+  try {
+    await db.exec(`ALTER TABLE user_sessions ADD COLUMN area TEXT DEFAULT 'Armado'`);
+  } catch (e) {
+    // Falla silenciosamente si la columna ya existe
+  }
+
+  try {
+    await db.exec(`ALTER TABLE history ADD COLUMN area TEXT DEFAULT 'Armado'`);
   } catch (e) {
     // Falla silenciosamente si la columna ya existe
   }

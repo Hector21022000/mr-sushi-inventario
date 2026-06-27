@@ -1,6 +1,6 @@
 /**
  * Qué hace el archivo: Componente de Tablas de Inventario Unificadas. Presenta todas las categorías en un solo apartado continuo con buscador general y botones de exportación al final.
- * Fecha de última modificación: 2026-06-26
+ * Fecha de última modificación: 2026-06-27
  * Nombre del autor: Antigravity
  */
 
@@ -231,7 +231,25 @@ const InlineTextInput: React.FC<{
 };
 
 export const InventoryTablesView: React.FC = () => {
-  const { inventory, loading, fetchData } = useInventory();
+  const { inventory, loading, fetchData, activeArea } = useInventory();
+
+  if (activeArea !== 'Armado') {
+    return (
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 text-center max-w-2xl mx-auto space-y-4 my-8">
+        <div className="p-4 bg-red-50 text-red-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto animate-pulse">
+          <FileSpreadsheet className="w-8 h-8" />
+        </div>
+        <h3 className="text-lg font-bold text-gray-900">Módulo {activeArea} Preparado</h3>
+        <p className="text-sm text-gray-500 leading-relaxed">
+          La estructura de almacenamiento y navegación para el inventario de <strong>{activeArea}</strong> ya está configurada e inicializada con éxito.
+        </p>
+        <p className="text-xs text-gray-400 bg-gray-50 p-3 rounded-2xl border border-gray-100">
+          Los formatos, campos específicos y tablas para este módulo se cargarán automáticamente en esta vista una vez sean proporcionados.
+        </p>
+      </div>
+    );
+  }
+
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   // Filtrar items por categoría y búsqueda

@@ -1,13 +1,13 @@
 /**
  * Qué hace el archivo: Módulo de Calendario e Historial de Inventarios. Muestra un calendario mensual interactivo para consultar y exportar inventarios cerrados de fechas pasadas.
- * Fecha de última modificación: 2026-06-26
+ * Fecha de última modificación: 2026-06-27
  * Nombre del autor: Antigravity
  */
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, ChevronLeft, ChevronRight, User, Clock, FileText, CheckCircle2, X } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, User, Clock, FileText, CheckCircle2, X, ChevronDown } from 'lucide-react';
 import { ReportGenerator } from '../Reports/ReportGenerator';
 import { type InventoryItem } from '../../context/InventoryContext';
 
@@ -20,6 +20,7 @@ interface HistoryLogSummary {
   turno: string;
   observaciones: string;
   estado: string;
+  area?: string;
   created_at: string;
 }
 
@@ -40,6 +41,11 @@ export const HistoryCalendarView: React.FC = () => {
     estado: string;
   } | null>(null);
   const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
+  const [collapsedAreas, setCollapsedAreas] = useState<Record<string, boolean>>({
+    Armado: false,
+    Barra: false,
+    Cocina: false
+  });
 
   const fetchHistory = async () => {
     try {
@@ -224,37 +230,70 @@ export const HistoryCalendarView: React.FC = () => {
                   <p className="text-xs font-semibold text-gray-600">Cargando sesiones...</p>
                 </div>
               ) : selectedLogs.length > 0 ? (
-                <div className="space-y-3 overflow-y-auto max-h-[350px] pr-1">
-                  {selectedLogs.map((log) => (
-                    <button
-                      key={log.uuid}
-                      onClick={() => loadLogDetail(log.uuid)}
-                      className={`w-full text-left p-4 border rounded-2xl transition-all flex flex-col gap-2 hover:border-red-300 hover:bg-red-50/10 ${
-                        activeLogDetail?.uuid === log.uuid
-                          ? 'border-red-500 bg-red-50/30 shadow-sm'
-                          : 'border-gray-100 bg-white'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white bg-red-600 px-2 py-0.5 rounded-full">
-                          Turno {log.turno}
-                        </span>
-                        <span className="text-[10px] text-gray-400 font-semibold flex items-center gap-0.5">
-                          <Clock className="w-3 h-3" />
-                          {log.hora}
-                        </span>
+                <div className="space-y-4 overflow-y-auto max-h-[380px] pr-1">
+                  {['Armado', 'Barra', 'Cocina'].map((areaName) => {
+                    const areaLogs = selectedLogs.filter((log) => {
+                      const logArea = log.area || 'Armado';
+                      return logArea.toLowerCase() === areaName.toLowerCase();
+                    });
+                    const isCollapsed = collapsedAreas[areaName] ?? false;
+
+                    return (
+                      <div key={areaName} className="space-y-2 border-b border-gray-100 pb-3 last:border-b-0">
+                        {/* Cabecera del Módulo */}
+                        <button
+                          onClick={() => setCollapsedAreas(prev => ({ ...prev, [areaName]: !prev[areaName] }))}
+                          className="w-full flex items-center justify-between py-1.5 px-2 hover:bg-gray-50 rounded-xl text-left cursor-pointer"
+                        >
+                          <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
+                            {areaName} ({areaLogs.length})
+                          </span>
+                          <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
+                        </button>
+
+                        {/* Lista de Registros */}
+                        {!isCollapsed && (
+                          <div className="pl-3 space-y-2">
+                            {areaLogs.length > 0 ? (
+                              areaLogs.map((log) => (
+                                <button
+                                  key={log.uuid}
+                                  onClick={() => loadLogDetail(log.uuid)}
+                                  className={`w-full text-left p-3 border rounded-xl transition-all flex flex-col gap-1.5 hover:border-red-300 hover:bg-red-50/10 cursor-pointer ${
+                                    activeLogDetail?.uuid === log.uuid
+                                      ? 'border-red-500 bg-red-50/30 shadow-xs'
+                                      : 'border-gray-100 bg-white'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-bold text-white bg-red-600 px-1.5 py-0.5 rounded-full">
+                                      Turno {log.turno}
+                                    </span>
+                                    <span className="text-[9px] text-gray-400 font-semibold flex items-center gap-0.5">
+                                      <Clock className="w-2.5 h-2.5" />
+                                      {log.hora}
+                                    </span>
+                                  </div>
+                                  <div className="text-[11px] text-gray-700 font-semibold flex items-center gap-1.5">
+                                    <User className="w-3.5 h-3.5 text-gray-400" />
+                                    {log.encargado}
+                                  </div>
+                                  {log.observaciones && (
+                                    <p className="text-[9px] text-gray-400 italic truncate">
+                                      Obs: {log.observaciones}
+                                    </p>
+                                  )}
+                                </button>
+                              ))
+                            ) : (
+                              <p className="text-[10px] text-gray-400 italic pl-5">Sin registros en este módulo</p>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div className="text-xs text-gray-700 font-semibold flex items-center gap-1.5">
-                        <User className="w-4 h-4 text-gray-400" />
-                        {log.encargado}
-                      </div>
-                      {log.observaciones && (
-                        <p className="text-[10px] text-gray-400 italic truncate">
-                          Obs: {log.observaciones}
-                        </p>
-                      )}
-                    </button>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center text-gray-400 border border-dashed border-gray-200 rounded-2xl">

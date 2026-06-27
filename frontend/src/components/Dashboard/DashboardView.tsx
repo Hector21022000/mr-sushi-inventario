@@ -1,6 +1,6 @@
 /**
  * Qué hace el archivo: Componente de Dashboard que muestra tarjetas de KPI de inventario, gráfico de barras de productos con menor stock y gráfico circular de distribución de stock.
- * Fecha de última modificación: 2026-06-26
+ * Fecha de última modificación: 2026-06-27
  * Nombre del autor: Antigravity
  */
 
@@ -29,7 +29,24 @@ import {
 } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
-  const { stats, inventory } = useInventory();
+  const { stats, inventory, activeArea } = useInventory();
+
+  if (activeArea !== 'Armado') {
+    return (
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 text-center max-w-2xl mx-auto space-y-4 my-8">
+        <div className="p-4 bg-red-50 text-red-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto">
+          <Boxes className="w-8 h-8" />
+        </div>
+        <h3 className="text-lg font-bold text-gray-900">Estadísticas de {activeArea}</h3>
+        <p className="text-sm text-gray-500 leading-relaxed font-semibold">
+          No hay datos cargados para el módulo de <strong>{activeArea}</strong> todavía.
+        </p>
+        <p className="text-xs text-gray-400">
+          Las métricas y gráficos del dashboard se generarán en tiempo real a medida que se ingresen productos en este módulo.
+        </p>
+      </div>
+    );
+  }
 
   // Preparar datos para el gráfico circular de distribución de estados
   const pieData = [

@@ -32,7 +32,8 @@ export const updateInventoryItem = async (req: Request, res: Response) => {
     comentarios,
     responsable = 'Sistema',
     activeInventoryUuid,
-    turno = ''
+    turno = '',
+    area = 'Armado'
   } = req.body;
 
   try {
@@ -142,9 +143,9 @@ export const updateInventoryItem = async (req: Request, res: Response) => {
         }
 
         await db.run(
-          `INSERT INTO history (product_id, product_name, field_changed, value_old, value_new, responsable, turno)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [id, name, item.label, oldValStr || '0', newValStr || '0', responsable, turno]
+          `INSERT INTO history (product_id, product_name, field_changed, value_old, value_new, responsable, turno, area)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [id, name, item.label, oldValStr || '0', newValStr || '0', responsable, turno, area]
         );
       }
     }
@@ -197,15 +198,15 @@ export const updateInventoryItem = async (req: Request, res: Response) => {
 // --- NUEVOS CONTROLADORES DE HISTORIAL Y SESIONES ---
 
 export const saveSession = async (req: Request, res: Response) => {
-  const { encargado, turno } = req.body;
+  const { encargado, turno, area = 'Armado' } = req.body;
   if (!encargado || !turno) {
     return res.status(400).json({ error: 'Encargado y turno son requeridos' });
   }
   try {
     const db = await getDb();
     await db.run(
-      'INSERT INTO user_sessions (encargado, turno) VALUES (?, ?)',
-      [encargado, turno]
+      'INSERT INTO user_sessions (encargado, turno, area) VALUES (?, ?, ?)',
+      [encargado, turno, area]
     );
     res.json({ success: true });
   } catch (error: any) {
@@ -217,6 +218,7 @@ export const getActiveInventory = async (req: Request, res: Response) => {
   const encargado = req.query.encargado as string;
   const turno = req.query.turno as string;
   const deviceDate = req.query.deviceDate as string;
+  const area = (req.query.area as string) || 'Armado';
 
   if (!encargado || !turno) {
     return res.status(400).json({ error: 'Encargado y turno son requeridos' });
@@ -231,12 +233,12 @@ export const getActiveInventory = async (req: Request, res: Response) => {
     const ahora = new Date();
     const horaStr = ahora.toTimeString().split(' ')[0];
 
-    // Cerrar automáticamente cualquier inventario anterior que haya quedado abierto
+    // Cerrar automáticamente cualquier inventario anterior que haya quedado abierto para este área
     await db.run(
       `UPDATE inventories_history 
        SET estado = 'Cerrado', updated_at = CURRENT_TIMESTAMP 
-       WHERE fecha < ? AND estado = 'Abierto'`,
-      [hoy]
+       WHERE fecha < ? AND estado = 'Abierto' AND area = ?`,
+      [hoy, area]
     );
 
     // Función helper para sincronizar el snapshot JSON de productos con la tabla clásica 'inventory'
@@ -247,7 +249,7 @@ export const getActiveInventory = async (req: Request, res: Response) => {
            SET cajas_desarmadas = ?, cajas_armadas = ?, s_inicial = ?, ingreso = ?,
                total = ?, consumido = ?, cierre_turno = ?, merma = ?, s_final = ?,
                restante = ?, produccion = ?, requerimiento = ?, comentarios = ?, updated_at = CURRENT_TIMESTAMP
-           WHERE category = ? AND name = ?`,
+           WHERE category = ? AND name = ? AND area = ?`,
           [
             p.cajas_desarmadas || 0,
             p.cajas_armadas || 0,
@@ -263,17 +265,18 @@ export const getActiveInventory = async (req: Request, res: Response) => {
             p.requerimiento || '',
             p.comentarios || '',
             p.category,
-            p.name
+            p.name,
+            area
           ]
         );
       }
     };
 
-    // 1. Buscar inventario abierto para hoy (independientemente del turno/encargado)
+    // 1. Buscar inventario abierto para hoy (independientemente del turno/encargado) para este área
     let active = await db.get(
       `SELECT * FROM inventories_history 
-       WHERE fecha = ? AND estado = 'Abierto'`,
-      [hoy]
+       WHERE fecha = ? AND estado = 'Abierto' AND area = ?`,
+      [hoy, area]
     );
 
     if (active) {
@@ -301,11 +304,11 @@ export const getActiveInventory = async (req: Request, res: Response) => {
       return res.json(active);
     }
 
-    // 2. Si no hay inventario abierto hoy, verificar si ya se CERRÓ el del día de hoy
+    // 2. Si no hay inventario abierto hoy, verificar si ya se CERRÓ el del día de hoy y de este área
     const closedToday = await db.get(
       `SELECT * FROM inventories_history 
-       WHERE fecha = ? AND estado = 'Cerrado'`,
-      [hoy]
+       WHERE fecha = ? AND estado = 'Cerrado' AND area = ?`,
+      [hoy, area]
     );
 
     if (closedToday) {
@@ -322,13 +325,15 @@ export const getActiveInventory = async (req: Request, res: Response) => {
       return res.json(closedToday);
     }
 
-    // 3. Crear el nuevo inventario para hoy (primer inicio de sesión del día)
-    const baseItems = await db.all('SELECT * FROM inventory ORDER BY category ASC, id ASC');
+    // 3. Crear el nuevo inventario para hoy (primer inicio de sesión del día para este área)
+    const baseItems = await db.all('SELECT * FROM inventory WHERE area = ? ORDER BY category ASC, id ASC', [area]);
 
-    // Buscar el último inventario registrado en general para heredar stocks (sea abierto o cerrado)
+    // Buscar el último inventario registrado en general para heredar stocks (sea abierto o cerrado) para este área
     const lastClosed = await db.get(
       `SELECT productos FROM inventories_history 
-       ORDER BY fecha DESC, hora DESC, id DESC LIMIT 1`
+       WHERE area = ?
+       ORDER BY fecha DESC, hora DESC, id DESC LIMIT 1`,
+      [area]
     );
 
     let stockHeredado: Record<string, number> = {};
@@ -345,7 +350,7 @@ export const getActiveInventory = async (req: Request, res: Response) => {
           }
         });
       } catch (e) {
-        console.error('Error parseando productos de inventario cerrado anterior:', e);
+        console.error('Error parseando productos de inventario anterior:', e);
       }
     }
 
@@ -378,9 +383,9 @@ export const getActiveInventory = async (req: Request, res: Response) => {
     respObj[turno] = { encargado, ingreso: horaStr };
 
     await db.run(
-      `INSERT INTO inventories_history (uuid, fecha, hora, encargado, turno, productos, responsables, estado)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'Abierto')`,
-      [newUuid, hoy, horaStr, encargado, turno, JSON.stringify(newProducts), JSON.stringify(respObj)]
+      `INSERT INTO inventories_history (uuid, fecha, hora, encargado, turno, productos, responsables, estado, area)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'Abierto', ?)`,
+      [newUuid, hoy, horaStr, encargado, turno, JSON.stringify(newProducts), JSON.stringify(respObj), area]
     );
 
     // Sincronizar la tabla clásica de la base de datos
@@ -395,7 +400,8 @@ export const getActiveInventory = async (req: Request, res: Response) => {
       productos: newProducts,
       responsables: respObj,
       observaciones: '',
-      estado: 'Abierto'
+      estado: 'Abierto',
+      area
     };
 
     res.json(created);
@@ -437,7 +443,7 @@ export const updateActiveInventory = async (req: Request, res: Response) => {
          SET cajas_desarmadas = ?, cajas_armadas = ?, s_inicial = ?, ingreso = ?,
              total = ?, consumido = ?, cierre_turno = ?, merma = ?, s_final = ?,
              restante = ?, produccion = ?, requerimiento = ?, comentarios = ?, updated_at = CURRENT_TIMESTAMP
-         WHERE category = ? AND name = ?`,
+         WHERE category = ? AND name = ? AND area = ?`,
         [
           p.cajas_desarmadas || 0,
           p.cajas_armadas || 0,
@@ -453,7 +459,8 @@ export const updateActiveInventory = async (req: Request, res: Response) => {
           p.requerimiento || '',
           p.comentarios || '',
           p.category,
-          p.name
+          p.name,
+          current.area || 'Armado'
         ]
       );
     }
@@ -490,7 +497,7 @@ export const getInventoryHistory = async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     const logs = await db.all(
-      `SELECT id, uuid, fecha, hora, encargado, turno, observaciones, estado, created_at, updated_at 
+      `SELECT id, uuid, fecha, hora, encargado, turno, observaciones, estado, area, created_at, updated_at 
        FROM inventories_history 
        ORDER BY fecha DESC, hora DESC, id DESC`
     );

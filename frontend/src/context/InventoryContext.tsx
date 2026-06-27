@@ -67,6 +67,7 @@ interface InventoryContextType {
   turno: string;
   activeInventoryUuid: string | null;
   activeInventoryDate: string | null;
+  activeArea: string;
   isClosedToday: boolean;
   responsables: Record<string, any> | null;
   loading: boolean;
@@ -82,6 +83,7 @@ interface InventoryContextType {
   clearLogs: () => Promise<void>;
   saveActiveInventorySnapshot: () => Promise<void>;
   closeInventory: () => Promise<void>;
+  switchArea: (newArea: string) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -105,6 +107,9 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   });
   const [activeInventoryUuid, setActiveInventoryUuid] = useState<string | null>(null);
   const [activeInventoryDate, setActiveInventoryDate] = useState<string | null>(null);
+  const [activeArea, setActiveArea] = useState<string>(() => {
+    return localStorage.getItem('mr_sushi_active_area') || 'Armado';
+  });
   const [isClosedToday, setIsClosedToday] = useState<boolean>(false);
   const [responsables, setResponsables] = useState<Record<string, any> | null>(null);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
@@ -150,7 +155,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setError(null);
     try {
       // Registrar sesión en el backend
-      await axios.post(`${API_URL}/sessions`, { encargado, turno: turnoSeleccionado });
+      await axios.post(`${API_URL}/sessions`, { encargado, turno: turnoSeleccionado, area: activeArea });
       
       // Actualizar localStorage y states
       setResponsableState(encargado);
@@ -161,7 +166,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Obtener o crear inventario activo para este turno/usuario
       const deviceDate = getDeviceDateString();
       const activeRes = await axios.get(`${API_URL}/inventory/active`, {
-        params: { encargado, turno: turnoSeleccionado, deviceDate }
+        params: { encargado, turno: turnoSeleccionado, deviceDate, area: activeArea }
       });
 
       setActiveInventoryUuid(activeRes.data.uuid);
@@ -193,6 +198,32 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setInventory([]);
     localStorage.removeItem('mr_sushi_responsable');
     localStorage.removeItem('mr_sushi_turno');
+  };
+
+  // Cambiar de área de inventario
+  const switchArea = async (newArea: string) => {
+    setActiveArea(newArea);
+    localStorage.setItem('mr_sushi_active_area', newArea);
+    if (responsable && turno) {
+      setLoading(true);
+      setError(null);
+      try {
+        const deviceDate = getDeviceDateString();
+        const activeRes = await axios.get(`${API_URL}/inventory/active`, {
+          params: { encargado: responsable, turno, deviceDate, area: newArea }
+        });
+        setActiveInventoryUuid(activeRes.data.uuid);
+        setActiveInventoryDate(activeRes.data.fecha);
+        setInventory(activeRes.data.productos);
+        setIsClosedToday(activeRes.data.estado === 'Cerrado');
+        setResponsables(activeRes.data.responsables || null);
+      } catch (err) {
+        console.error('Error switching area:', err);
+        setError('Error al cambiar de módulo de inventario.');
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   // Guardar instantánea (Snapshot JSON) en segundo plano
@@ -282,7 +313,8 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         ...data,
         responsable,
         activeInventoryUuid,
-        turno
+        turno,
+        area: activeArea
       });
 
       // Reemplazar con los datos calculados exactamente por el servidor
@@ -363,7 +395,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         try {
           setLoading(true);
           const activeRes = await axios.get(`${API_URL}/inventory/active`, {
-            params: { encargado: responsable, turno, deviceDate: currentDateStr }
+            params: { encargado: responsable, turno, deviceDate: currentDateStr, area: activeArea }
           });
 
           setActiveInventoryUuid(activeRes.data.uuid);
@@ -386,7 +418,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     const interval = setInterval(checkDateChange, 5000); // Comprobar cada 5 segundos
     return () => clearInterval(interval);
-  }, [activeInventoryUuid, activeInventoryDate, responsable, turno]);
+  }, [activeInventoryUuid, activeInventoryDate, responsable, turno, activeArea]);
 
   // Calcular estadísticas dinámicas para el dashboard
   const stats: DashboardStats = React.useMemo(() => {
@@ -451,6 +483,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         turno,
         activeInventoryUuid,
         activeInventoryDate,
+        activeArea,
         isClosedToday,
         responsables,
         loading,
@@ -465,7 +498,8 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         updateItem,
         clearLogs,
         saveActiveInventorySnapshot,
-        closeInventory
+        closeInventory,
+        switchArea
       }}
     >
       {children}
