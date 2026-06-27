@@ -405,10 +405,9 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
             {[
               { id: 'cajas_1', label: '1. CAJAS (1ER TURNO)', type: 'cajas' },
               { id: 'cajas_2', label: '2. CAJAS (2DO TURNO)', type: 'cajas' },
-              { id: 'acevichado', label: '3. PRODUCTOS ACEVICHADO', type: 'acevichado' },
-              { id: 'salseros', label: '4. SALSEROS', type: 'salseros' },
-              { id: 'utensilios', label: '5. UTENSILIOS DE ARMADO', type: 'utensilios' },
-              { id: 'gaseosas', label: '6. GASEOSAS', type: 'gaseosas' }
+              { id: 'salseros', label: '3. SALSEROS', type: 'salseros' },
+              { id: 'utensilios', label: '4. UTENSILIOS DE ARMADO', type: 'utensilios' },
+              { id: 'gaseosas', label: '5. GASEOSAS', type: 'gaseosas' }
             ].map((section) => {
               // Filtrar productos correspondientes a la sección
               const sectionItems = activeData.filter(item => {

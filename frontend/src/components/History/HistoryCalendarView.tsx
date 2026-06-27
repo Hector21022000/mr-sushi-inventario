@@ -347,7 +347,7 @@ export const HistoryCalendarView: React.FC = () => {
 
               {/* Contenedor de Tablas de Lectura */}
               <div className="space-y-6">
-                {['cajas', 'acevichado', 'salseros', 'utensilios', 'gaseosas'].map((sectionType) => {
+                {['cajas', 'salseros', 'utensilios', 'gaseosas'].map((sectionType) => {
                   const items = activeLogDetail.productos.filter((item) => {
                     if (sectionType === 'cajas') return item.category.startsWith('cajas');
                     return item.category === sectionType;
@@ -357,7 +357,6 @@ export const HistoryCalendarView: React.FC = () => {
 
                   const sectionLabels: Record<string, string> = {
                     cajas: 'CAJAS X MAKI (Cajas)',
-                    acevichado: 'PRODUCTOS ACEVICHADO (Salsas / Ingredientes)',
                     salseros: 'SALSEROS (Contenedores)',
                     utensilios: 'UTENSILIOS DE ARMADO (Empaque)',
                     gaseosas: 'GASEOSAS (Bebidas)'
