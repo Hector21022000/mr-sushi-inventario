@@ -23,8 +23,20 @@ let pgPool: pg.Pool | null = null;
 
 function getPgPool(): pg.Pool {
   if (!pgPool) {
+    let connectionString = process.env.DATABASE_URL;
+    if (connectionString && (connectionString.startsWith('postgres://') || connectionString.startsWith('postgresql://'))) {
+      try {
+        const urlObj = new URL(connectionString);
+        if (urlObj.searchParams.has('sslmode')) {
+          urlObj.searchParams.delete('sslmode');
+        }
+        connectionString = urlObj.toString();
+      } catch (err) {
+        console.error('Error parsing DATABASE_URL:', err);
+      }
+    }
     pgPool = new pg.Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString,
       ssl: process.env.DATABASE_URL?.includes('localhost') ? false : { rejectUnauthorized: false }
     });
   }

@@ -8,7 +8,7 @@ import React, { useState } from 'react';
 import { useInventory, type InventoryItem } from '../../context/InventoryContext';
 import { ReportGenerator } from '../Reports/ReportGenerator';
 import { motion } from 'framer-motion';
-import { AlertCircle, FileSpreadsheet, Search, Check, RefreshCw } from 'lucide-react';
+import { AlertCircle, FileSpreadsheet, Search, Check, RefreshCw, ChevronDown } from 'lucide-react';
 
 // Determinar color de celda TOTAL basado en reglas por categoría (Cajas = 50, otros = 10)
 const getTotalCellStyle = (total: number, category: string) => {
@@ -68,22 +68,28 @@ const InlineNumberInput: React.FC<{
   const [val, setVal] = useState<string>(String(item[field] ?? '0'));
   const [saved, setSaved] = useState<boolean>(false);
   const [isFocused, setIsFocused] = useState<boolean>(false);
+  const [showDropdown, setShowDropdown] = useState<boolean>(false);
 
   React.useEffect(() => {
-    if (!isFocused) {
+    if (!isFocused && !showDropdown) {
       setVal(String(item[field] ?? '0'));
     }
-  }, [item[field], isFocused]);
+  }, [item[field], isFocused, showDropdown]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputVal = e.target.value;
     if (inputVal === '' || /^\d*\.?\d*$/.test(inputVal)) {
-      setVal(inputVal); // Solo cambiar el estado local (no actualizar el servidor en cada tecla para mantener foco)
+      setVal(inputVal);
     }
   };
 
   const handleBlur = () => {
-    setIsFocused(false);
+    // Retrasar el cierre para dar tiempo a registrar clics en el dropdown
+    setTimeout(() => {
+      setIsFocused(false);
+      setShowDropdown(false);
+    }, 150);
+
     const parsed = val === '' ? 0 : parseFloat(val);
     if (parsed !== parseFloat(String(item[field] ?? '0'))) {
       updateItem(item.id, { [field]: parsed }).then(() => {
@@ -99,18 +105,67 @@ const InlineNumberInput: React.FC<{
     }
   };
 
+  const selectNumber = (num: number) => {
+    setVal(String(num));
+    setShowDropdown(false);
+    setIsFocused(false);
+    if (num !== parseFloat(String(item[field] ?? '0'))) {
+      updateItem(item.id, { [field]: num }).then(() => {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 800);
+      });
+    }
+  };
+
+  // Números sugeridos comunes para el inventario
+  const numberOptions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100];
+
   return (
-    <div className="relative flex items-center">
-      <input
-        type="text"
-        value={val === '0' && field !== 'comentarios' ? '' : val}
-        onChange={handleChange}
-        onFocus={() => setIsFocused(true)}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        className="w-16 md:w-20 bg-gray-50 border border-gray-200 rounded-lg py-1 px-2 text-center text-sm font-medium text-gray-800 focus:bg-white focus:border-red-500 focus:outline-none transition-all"
-      />
+    <div className="relative flex items-center justify-center">
+      <div className="relative flex items-center bg-gray-50 border border-gray-200 rounded-lg focus-within:bg-white focus-within:border-red-500 transition-all w-20 md:w-24">
+        <input
+          type="text"
+          value={val === '0' && field !== 'comentarios' ? '' : val}
+          onChange={handleChange}
+          onFocus={() => {
+            setIsFocused(true);
+            setShowDropdown(true);
+          }}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className="w-full bg-transparent border-0 py-1 pl-2 pr-6 text-center text-sm font-medium text-gray-800 focus:outline-none focus:ring-0"
+        />
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault(); // Previene blur del input
+            setShowDropdown(!showDropdown);
+          }}
+          className="absolute right-1 text-gray-400 hover:text-gray-600 focus:outline-none"
+        >
+          <ChevronDown className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {showDropdown && (
+        <div className="absolute top-full left-0 right-0 mt-1 max-h-36 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg z-50 divide-y divide-gray-50 scrollbar-thin">
+          {numberOptions.map((num) => (
+            <button
+              key={num}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault(); // Muy importante: evita blur del input al hacer click
+                selectNumber(num);
+              }}
+              className="w-full text-center py-1 text-xs hover:bg-red-50 hover:text-red-600 transition-colors font-semibold text-gray-700 block"
+            >
+              {num}
+            </button>
+          ))}
+        </div>
+      )}
+
       {saved && (
         <span className="absolute -right-4 text-emerald-500 animate-fade-out">
           <Check className="w-3.5 h-3.5" />
