@@ -161,6 +161,20 @@ export async function initDb() {
     )
   `);
 
+  // Auto-reparación: Asegurar que la columna is_active exista en bases de datos antiguas y setear a 1
+  try {
+    // Si la columna ya existe, esto fallará silenciosamente, lo cual es esperado
+    await db.exec(`ALTER TABLE inventory ADD COLUMN is_active INTEGER DEFAULT 1`);
+  } catch (e) {
+    // Ignorar si la columna ya existe
+  }
+  try {
+    // Actualizar productos antiguos para que no desaparezcan
+    await db.exec(`UPDATE inventory SET is_active = 1 WHERE is_active IS NULL`);
+  } catch (e) {
+    // Ignorar
+  }
+
   // Crear tabla de usuarios
   await db.exec(`
     CREATE TABLE IF NOT EXISTS users (
