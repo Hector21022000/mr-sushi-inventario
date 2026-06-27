@@ -88,7 +88,7 @@ router.get('/test/seed-armado', async (req, res) => {
       const strRow = row.join(' ').toUpperCase();
       if (strRow.includes('CIERRE TOTAL 1ER TURNO')) { currentCategory = 'cajas_1'; continue; }
       if (strRow.includes('CIERRE TOTAL 2DO TURNO')) { currentCategory = 'cajas_2'; continue; }
-      if (row[0] === 'PRODUCTOS ACEVICHADO') { currentCategory = 'acevichado'; continue; }
+      if (row[0] === 'PRODUCTOS ACEVICHADO') { currentCategory = ''; continue; } // Ignorar esta sección
       if (row[0] === 'SALSEROS') { currentCategory = 'salseros'; continue; }
       if (row[0] === 'UTENCILIOS DE ARMADO' || row[0] === 'UTENSILIOS DE ARMADO') { currentCategory = 'utensilios'; continue; }
       if (row[0] === 'GASEOSAS') { currentCategory = 'gaseosas'; continue; }
