@@ -6,12 +6,15 @@
 
 import React, { useState } from 'react';
 import { useInventory } from './context/InventoryContext';
+import { useAuth } from './context/AuthContext';
 import { DashboardView } from './components/Dashboard/DashboardView';
 import { InventoryTablesView } from './components/Inventory/InventoryTablesView';
 import { RequiredItemsView } from './components/Inventory/RequiredItemsView';
 import { AuditHistoryView } from './components/History/AuditHistoryView';
 import { HistoryCalendarView } from './components/History/HistoryCalendarView';
 import { LoginView } from './components/Auth/LoginView';
+import { RegisterView } from './components/Auth/RegisterView';
+import { UserManagement } from './components/Admin/UserManagement';
 import { CriticalSidebarPanel } from './components/Sidebar/CriticalSidebarPanel';
 import { RealTimeClockPanel } from './components/ui/RealTimeClockPanel';
 import { 
@@ -25,32 +28,34 @@ import {
   AlertTriangle,
   Calendar,
   LogOut,
+  Users,
   CheckCircle2
 } from 'lucide-react';
 import logoImg from './assets/logo.png';
 
-const App: React.FC = () => {
-  const { 
-    responsable, 
-    turno, 
-    activeInventoryUuid, 
-    isClosedToday,
-    closeInventory, 
-    logoutUser, 
-    criticalItems, 
-    error 
-  } = useInventory();
-
+const AppContent: React.FC = () => {
+  const { user, logout, loading } = useAuth();
+  const { closeInventory, isClosedToday, criticalItems, error } = useInventory();
+  
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [criticalPanelOpen, setCriticalPanelOpen] = useState<boolean>(false);
+  const [showRegister, setShowRegister] = useState<boolean>(false);
 
-  // Si no se ha iniciado sesión, bloquear la aplicación con la pantalla de bienvenida
-  if (!activeInventoryUuid) {
-    return <LoginView />;
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
   }
 
-  const menuItems = [
+  // Flujo de Autenticación
+  if (!user) {
+    if (showRegister) return <RegisterView onSwitchToLogin={() => setShowRegister(false)} />;
+    return <LoginView onSwitchToRegister={() => setShowRegister(true)} />;
+  }
+
+  const isSuperadmin = user.role === 'superadmin';
+  const isAdmin = user.role === 'admin';
+
+  let menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'inventory', label: 'Inventario General', icon: FileSpreadsheet },
     { id: 'required_items', label: 'Lista de Compras', icon: ShoppingCart },
@@ -58,13 +63,18 @@ const App: React.FC = () => {
     { id: 'history', label: 'Auditoría de Cambios', icon: History }
   ];
 
+  // Si es Superadmin o Admin, mostrar panel de gestión de usuarios
+  if (isSuperadmin || isAdmin) {
+    menuItems.push({ id: 'users', label: 'Gestión de Usuarios', icon: Users });
+  }
+
+  // Filtrado de reportes e historial para trabajadores (opcional, pero la seguridad ya está en backend)
+
   return (
     <div className="min-h-screen bg-gray-50 flex font-sans antialiased text-gray-800">
-      
       {/* SIDEBAR ESCRITORIO */}
       <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-gray-100 p-6 justify-between shrink-0">
         <div className="space-y-8">
-          {/* Logo y Nombre */}
           <div className="flex items-center gap-3">
             <img src={logoImg} alt="MR·SUSHI Logo" className="h-10 w-10 object-contain rounded-lg" />
             <div>
@@ -73,7 +83,6 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Menú de Navegación */}
           <nav className="space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
@@ -95,37 +104,28 @@ const App: React.FC = () => {
           </nav>
         </div>
 
-        {/* Footer Sidebar / Responsable y Controles de Cierre */}
         <div className="border-t border-gray-100 pt-4 space-y-3">
           <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 space-y-2">
-            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Sesión Activa</span>
-            <div className="text-xs font-bold text-gray-800 flex items-center gap-2">
-              <User className="w-4 h-4 text-red-500 shrink-0" />
-              <span className="truncate">{responsable}</span>
+            <div className="flex items-center justify-between text-xs font-bold text-gray-500 uppercase tracking-wider px-1">
+              <span>Sesión Activa</span>
             </div>
-            <div className="text-[10px] font-semibold text-gray-500 pl-6">
-              Turno: {turno}
-            </div>
-            <div className="pt-2 flex flex-col gap-1.5">
-              {turno === 'Noche' && !isClosedToday && (
-                <button
-                  onClick={closeInventory}
-                  className="w-full py-2 px-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors shadow-sm animate-pulse"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  Finalizar Inventario del Día
-                </button>
-              )}
-              <button
-                onClick={logoutUser}
-                className="w-full py-1.5 px-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                Guardar y Salir
-              </button>
+            <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm flex items-center gap-3">
+              <div className="bg-red-100 p-2 rounded-lg">
+                <User className="w-4 h-4 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm font-extrabold text-gray-900 leading-none">{user.fullName}</p>
+                <p className="text-[10px] text-gray-500 mt-1 font-medium">{user.role.toUpperCase()} • {user.area || 'Sin Área'}</p>
+              </div>
             </div>
           </div>
-          <p className="text-[10px] text-gray-400 text-center font-medium">© {new Date().getFullYear()} MR·SUSHI S.A.C.</p>
+          <button 
+            onClick={() => { closeInventory(); logout(); }}
+            className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 font-bold py-3 px-4 rounded-2xl border border-gray-200 shadow-sm transition-colors text-sm"
+          >
+            <LogOut className="w-4 h-4" />
+            Cerrar Sesión
+          </button>
         </div>
       </aside>
 
@@ -175,23 +175,15 @@ const App: React.FC = () => {
             <div className="border-t border-gray-100 pt-4 space-y-2">
               <div className="bg-gray-50 p-3 rounded-xl space-y-2">
                 <span className="text-[9px] font-bold text-gray-400 uppercase block">Sesión Activa</span>
-                <div className="text-xs font-bold text-gray-800 truncate">{responsable} ({turno})</div>
+                <div className="text-xs font-bold text-gray-800 truncate">{user.fullName}</div>
+                <div className="text-[9px] text-gray-500">{user.role.toUpperCase()} • {user.area || 'Sin Área'}</div>
                 <div className="flex flex-col gap-1 pt-1">
-                  {turno === 'Noche' && !isClosedToday && (
-                    <button
-                      onClick={closeInventory}
-                      className="w-full py-1.5 px-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[9px] font-bold uppercase flex items-center justify-center gap-1"
-                    >
-                      <CheckCircle2 className="w-3 h-3" />
-                      Finalizar Inventario del Día
-                    </button>
-                  )}
                   <button
-                    onClick={logoutUser}
-                    className="w-full py-1 px-2 bg-gray-100 text-gray-600 rounded-lg text-[9px] font-bold uppercase flex items-center justify-center gap-1"
+                    onClick={() => { closeInventory(); logout(); }}
+                    className="w-full py-1.5 px-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-[9px] font-bold uppercase flex items-center justify-center gap-1 transition-colors border border-gray-200"
                   >
                     <LogOut className="w-3 h-3" />
-                    Guardar y Salir
+                    Cerrar Sesión
                   </button>
                 </div>
               </div>
@@ -230,8 +222,8 @@ const App: React.FC = () => {
             {/* Responsable Rápido en Cabecera (Desktop) */}
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-xl border border-gray-100 text-xs">
               <User className="w-3.5 h-3.5 text-gray-400" />
-              <span className="text-gray-500 font-medium">Encargado:</span>
-              <strong className="text-gray-800">{responsable} ({turno})</strong>
+              <span className="text-gray-500 font-medium">Usuario:</span>
+              <strong className="text-gray-800">{user.fullName} ({user.role})</strong>
             </div>
 
             {/* Panel de Fecha y Hora en tiempo real */}
@@ -283,6 +275,7 @@ const App: React.FC = () => {
           {activeTab === 'required_items' && <RequiredItemsView />}
           {activeTab === 'history_calendar' && <HistoryCalendarView />}
           {activeTab === 'history' && <AuditHistoryView />}
+          {activeTab === 'users' && (isSuperadmin || isAdmin) && <UserManagement />}
         </main>
       </div>
 
@@ -295,4 +288,4 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
+export default AppContent;

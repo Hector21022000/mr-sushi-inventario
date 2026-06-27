@@ -1,148 +1,108 @@
-/**
- * Qué hace el archivo: Pantalla de Bienvenida (Login) para ingresar el nombre del encargado, seleccionar el área y el turno de trabajo.
- * Fecha de última modificación: 2026-06-27
- * Nombre del autor: Antigravity
- */
-
 import React, { useState } from 'react';
-import { useInventory } from '../../context/InventoryContext';
+import { useAuth } from '../../context/AuthContext';
+import { Lock, User, AlertTriangle } from 'lucide-react';
+import axios from 'axios';
 import logoImg from '../../assets/logo.png';
-import { User, Sun, Sunset, LogIn } from 'lucide-react';
 
-export const LoginView: React.FC = () => {
-  const { loginUser, error: contextError } = useInventory();
-  const [encargado, setEncargado] = useState<string>(() => {
-    return localStorage.getItem('mr_sushi_responsable') || '';
-  });
-  const [selectedArea, setSelectedArea] = useState<string>(() => {
-    return localStorage.getItem('mr_sushi_active_area') || 'Armado';
-  });
-  const [selectedTurno, setSelectedTurno] = useState<string>(() => {
-    return localStorage.getItem('mr_sushi_turno') || '';
-  });
-  const [localError, setLocalError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState<boolean>(false);
+export const LoginView: React.FC<{ onSwitchToRegister?: () => void }> = ({ onSwitchToRegister }) => {
+  const { login } = useAuth();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLocalError(null);
+    if (!username.trim() || !password.trim()) {
+      setError('Por favor, ingresa tu usuario y contraseña.');
+      return;
+    }
 
-    if (!encargado.trim()) {
-      setLocalError('Por favor, ingresa tu nombre.');
-      return;
-    }
-    if (!selectedArea) {
-      setLocalError('Por favor, selecciona un área.');
-      return;
-    }
-    if (!selectedTurno) {
-      setLocalError('Por favor, selecciona un turno de trabajo.');
-      return;
-    }
+    setLoading(true);
+    setError(null);
 
     try {
-      setSubmitting(true);
-      await loginUser(encargado.trim(), selectedTurno, selectedArea);
-    } catch (err) {
-      setLocalError('No se pudo establecer conexión para iniciar sesión. Inténtelo de nuevo.');
+      const res = await axios.post('/api/auth/login', { username, password });
+      login(res.data.user, res.data.token);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al iniciar sesión. Intenta nuevamente.');
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const turnos = [
-    { id: 'Mañana', icon: Sun, label: 'Mañana', color: 'hover:border-amber-500 hover:bg-amber-50/50 text-amber-600 border-gray-200' },
-    { id: 'Tarde', icon: Sunset, label: 'Tarde', color: 'hover:border-orange-500 hover:bg-orange-50/50 text-orange-600 border-gray-200' }
-  ];
-
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Círculos decorativos de fondo */}
-      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-red-500/5 blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-red-500/5 blur-3xl pointer-events-none"></div>
-
-      <div className="w-full max-w-md bg-white rounded-3xl border border-gray-100 shadow-xl p-8 relative z-10">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100">
+        
         <div className="flex flex-col items-center mb-8">
-          <div className="bg-red-50 p-4 rounded-3xl mb-4 shadow-sm border border-red-100/50">
-            <img src={logoImg} alt="MR·SUSHI" className="h-16 w-16 object-contain" />
-          </div>
-          <h2 className="text-2xl font-extrabold text-gray-900 font-sans">Control de Acceso</h2>
-          <p className="text-sm text-gray-500 mt-1">Ingresa tus datos para acceder a tu inventario.</p>
+          <img src={logoImg} alt="MR·SUSHI" className="h-16 w-16 mb-4 rounded-xl shadow-sm" />
+          <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Bienvenido de nuevo</h2>
+          <p className="text-sm text-gray-500 mt-1 font-medium">Sistema Inteligente de Inventario</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Campo Encargado */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Nombre del Trabajador</label>
+        {error && (
+          <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-2xl flex items-start gap-3 mb-6 animate-in slide-in-from-top-2">
+            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+            <p className="text-sm font-medium">{error}</p>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider ml-1">Usuario</label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <User className="h-5 w-5 text-gray-400" />
+              </div>
               <input
                 type="text"
-                value={encargado}
-                onChange={(e) => setEncargado(e.target.value)}
-                placeholder="Ingresa tu nombre completo..."
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-11 pr-4 text-sm focus:bg-white focus:border-red-500 focus:outline-none transition-all font-medium text-gray-800"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="block w-full pl-11 pr-4 py-3.5 bg-gray-50 border-gray-200 rounded-2xl text-gray-900 focus:bg-white focus:ring-2 focus:ring-red-600 focus:border-transparent font-medium transition-colors"
+                placeholder="Ingresa tu usuario"
               />
             </div>
           </div>
 
-          {/* Selección de Área */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Área o Módulo</label>
-            <select
-              value={selectedArea}
-              onChange={(e) => setSelectedArea(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-sm focus:bg-white focus:border-red-500 focus:outline-none transition-all font-semibold text-gray-800 cursor-pointer"
-            >
-              <option value="Armado">Armado</option>
-              <option value="Barra">Barra</option>
-              <option value="Cocina">Cocina</option>
-            </select>
-          </div>
-
-          {/* Selector de Turno */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Seleccionar Turno</label>
-            <div className="grid grid-cols-2 gap-3">
-              {turnos.map((t) => {
-                const Icon = t.icon;
-                const isSelected = selectedTurno === t.id;
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setSelectedTurno(t.id)}
-                    className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all gap-1.5 cursor-pointer ${
-                      isSelected
-                        ? 'border-red-500 bg-red-50 text-red-600 font-bold scale-[1.02] shadow-sm'
-                        : `bg-white ${t.color} text-gray-600 font-medium`
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                    <span className="text-xs">{t.label}</span>
-                  </button>
-                );
-              })}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider ml-1">Contraseña</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Lock className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="block w-full pl-11 pr-4 py-3.5 bg-gray-50 border-gray-200 rounded-2xl text-gray-900 focus:bg-white focus:ring-2 focus:ring-red-600 focus:border-transparent font-medium transition-colors"
+                placeholder="••••••••"
+              />
             </div>
           </div>
 
-          {/* Alertas de error */}
-          {(localError || contextError) && (
-            <div className="p-3 bg-red-50 text-red-600 text-xs rounded-xl border border-red-100 font-medium text-center">
-              {localError || contextError}
-            </div>
-          )}
-
-          {/* Botón Ingresar */}
           <button
             type="submit"
-            disabled={submitting}
-            className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-red-200 disabled:shadow-none hover:shadow-red-300 transition-all text-sm uppercase tracking-wider cursor-pointer"
+            disabled={loading}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 px-4 rounded-2xl shadow-lg shadow-red-600/20 transform transition-all active:scale-[0.98] disabled:opacity-70 disabled:active:scale-100 flex justify-center items-center gap-2"
           >
-            <LogIn className="w-4 h-4" />
-            {submitting ? 'Ingresando...' : 'Ingresar'}
+            {loading ? 'Validando...' : 'Iniciar Sesión'}
           </button>
         </form>
+
+        {onSwitchToRegister && (
+          <div className="mt-8 text-center">
+            <p className="text-sm text-gray-500">
+              ¿No tienes una cuenta?{' '}
+              <button 
+                onClick={onSwitchToRegister}
+                className="text-red-600 font-bold hover:text-red-700 transition-colors"
+              >
+                Crear cuenta
+              </button>
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

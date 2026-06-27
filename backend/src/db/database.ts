@@ -160,6 +160,22 @@ export async function initDb() {
     )
   `);
 
+  // Crear tabla de usuarios
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      full_name TEXT NOT NULL,
+      username TEXT NOT NULL UNIQUE,
+      password TEXT NOT NULL,
+      status TEXT DEFAULT 'pending',
+      role TEXT DEFAULT 'worker',
+      area TEXT,
+      turno TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_login DATETIME
+    )
+  `);
+
   // Crear tabla de historial
   await db.exec(`
     CREATE TABLE IF NOT EXISTS history (

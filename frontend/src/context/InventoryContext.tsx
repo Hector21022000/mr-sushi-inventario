@@ -6,6 +6,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAuth } from './AuthContext';
 
 // Helper para obtener la fecha del dispositivo en formato YYYY-MM-DD
 const getDeviceDateString = () => {
@@ -97,36 +98,34 @@ export const useInventory = () => {
 };
 
 export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const auth = useAuth();
+  
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [history, setHistory] = useState<HistoryLog[]>([]);
-  const [responsable, setResponsableState] = useState<string>(() => {
-    return localStorage.getItem('mr_sushi_responsable') || '';
-  });
-  const [turno, setTurnoState] = useState<string>(() => {
-    return localStorage.getItem('mr_sushi_turno') || '';
-  });
+  
+  // Sincronizar estado local con AuthContext
+  const responsable = auth.user ? auth.user.fullName : '';
+  const turno = auth.user ? (auth.user.turno || '') : '';
+  const activeArea = auth.user ? (auth.user.area || 'Armado') : 'Armado';
+
   const [activeInventoryUuid, setActiveInventoryUuid] = useState<string | null>(null);
   const [activeInventoryDate, setActiveInventoryDate] = useState<string | null>(null);
-  const [activeArea, setActiveArea] = useState<string>(() => {
-    return localStorage.getItem('mr_sushi_active_area') || 'Armado';
-  });
   const [isClosedToday, setIsClosedToday] = useState<boolean>(false);
   const [responsables, setResponsables] = useState<Record<string, any> | null>(null);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Guardar responsable en localStorage
-  const setResponsable = (name: string) => {
-    setResponsableState(name);
-    localStorage.setItem('mr_sushi_responsable', name);
-  };
+  // Auto-login de inventario cuando cambia el usuario autenticado
+  useEffect(() => {
+    if (auth.user && auth.user.status === 'active' && auth.user.area) {
+      loginUser(auth.user.fullName, auth.user.turno || 'Mañana', auth.user.area);
+    }
+  }, [auth.user]);
 
-  // Guardar turno en localStorage
-  const setTurno = (t: string) => {
-    setTurnoState(t);
-    localStorage.setItem('mr_sushi_turno', t);
-  };
+  // Estos métodos se mantienen por compatibilidad pero su estado deriva de Auth
+  const setResponsable = () => {};
+  const setTurno = () => {};
 
   // Obtener datos base del servidor
   const fetchData = async () => {
@@ -157,10 +156,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Registrar sesión en el backend
       await axios.post(`${API_URL}/sessions`, { encargado, turno: turnoSeleccionado, area: areaSeleccionada });
       
-      // Actualizar localStorage y states
-      setResponsableState(encargado);
-      setTurnoState(turnoSeleccionado);
-      setActiveArea(areaSeleccionada);
+      // Actualizar localStorage
       localStorage.setItem('mr_sushi_responsable', encargado);
       localStorage.setItem('mr_sushi_turno', turnoSeleccionado);
       localStorage.setItem('mr_sushi_active_area', areaSeleccionada);
@@ -191,8 +187,6 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Cerrar sesión
   const logoutUser = () => {
-    setResponsableState('');
-    setTurnoState('');
     setActiveInventoryUuid(null);
     setActiveInventoryDate(null);
     setIsClosedToday(false);
@@ -204,7 +198,6 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Cambiar de área de inventario
   const switchArea = async (newArea: string) => {
-    setActiveArea(newArea);
     localStorage.setItem('mr_sushi_active_area', newArea);
     if (responsable && turno) {
       setLoading(true);

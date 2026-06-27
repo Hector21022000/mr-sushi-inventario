@@ -9,6 +9,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import apiRoutes from './routes/api';
+import authRoutes from './routes/auth';
 import { initDb } from './db/database';
 
 // Cargar configuración local de dotenv (de la carpeta actual y de la raíz del monorepo si existe)
@@ -23,6 +24,7 @@ app.use(cors());
 app.use(express.json());
 
 // Servir la API
+app.use('/api/auth', authRoutes);
 app.use('/api', apiRoutes);
 
 // Endpoint de prueba de salud
