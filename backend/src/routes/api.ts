@@ -43,4 +43,18 @@ router.delete('/history', clearHistory);
 // Rutas de Reportes
 router.post('/save-report', saveReport);
 
+// Ruta temporal de prueba para limpiar el inventario de hoy
+import { getDb } from '../db/database';
+router.get('/test/clear-today', async (req, res) => {
+  try {
+    const db = await getDb();
+    const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+    const hoy = (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
+    const result = await db.run("DELETE FROM inventories_history WHERE fecha = ?", [hoy]);
+    res.send(`<h1>Exito</h1><p>Se eliminaron los inventarios de hoy (${hoy}) de la base de datos de Neon. Registros borrados: ${result.changes || 0}.</p><p>Ya puedes recargar la aplicacion (frontend) para ver los cambios.</p>`);
+  } catch (error: any) {
+    res.status(500).send(`<h1>Error</h1><p>${error.message}</p>`);
+  }
+});
+
 export default router;
