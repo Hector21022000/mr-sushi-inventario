@@ -102,7 +102,9 @@ router.get('/test/seed-armado', async (req, res) => {
       
       if (currentCategory && typeof name === 'string' && name.trim() !== '') {
         await db.run(
-          `INSERT INTO inventory (category, name, measure, area, is_active) VALUES (?, ?, ?, 'Armado', 1)`,
+          `INSERT INTO inventory (category, name, measure, area, is_active) 
+           VALUES (?, ?, ?, 'Armado', 1)
+           ON CONFLICT(category, name, area) DO UPDATE SET is_active = 1, measure = excluded.measure`,
           [currentCategory, name.trim(), (measure ? String(measure).trim().toUpperCase() : 'UND')]
         );
         count++;
