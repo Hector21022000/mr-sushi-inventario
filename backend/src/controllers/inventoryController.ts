@@ -11,7 +11,7 @@ import crypto from 'crypto';
 export const getInventory = async (req: Request, res: Response) => {
   try {
     const db = await getDb();
-    const items = await db.all('SELECT * FROM inventory ORDER BY category ASC, id ASC');
+    const items = await db.all('SELECT * FROM inventory WHERE is_active = 1 ORDER BY category ASC, id ASC');
     res.json(items);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -326,7 +326,7 @@ export const getActiveInventory = async (req: Request, res: Response) => {
     }
 
     // 3. Crear el nuevo inventario para hoy (primer inicio de sesión del día para este área)
-    const baseItems = await db.all('SELECT * FROM inventory WHERE area = ? ORDER BY category ASC, id ASC', [area]);
+    const baseItems = await db.all('SELECT * FROM inventory WHERE area = ? AND is_active = 1 ORDER BY category ASC, id ASC', [area]);
 
     if (baseItems.length === 0) {
       // Si no hay productos configurados (ej. Barra y Cocina temporalmente), 

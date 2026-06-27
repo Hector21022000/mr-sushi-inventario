@@ -122,6 +122,35 @@ export const SystemSettingsView: React.FC = () => {
           </div>
 
         </div>
+
+        <h3 className="text-xl font-bold text-gray-900 mt-12 mb-6 flex items-center gap-2">
+          <Settings className="w-6 h-6 text-indigo-500" />
+          Columnas de Inventario
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            { key: 'col_ingreso_enabled', label: 'Ingreso', desc: 'Ingreso de productos durante el día' },
+            { key: 'col_consumido_enabled', label: 'Consumido', desc: 'Gasto de productos (Merma/Consumo)' },
+            { key: 'col_merma_enabled', label: 'Merma', desc: 'Pérdida por accidentes o fallas' },
+            { key: 'col_produccion_enabled', label: 'Producción', desc: 'Producción del día' },
+            { key: 'col_req_enabled', label: 'Requerimiento', desc: 'Cálculo de pedidos a proveedor' },
+            { key: 'col_comentarios_enabled', label: 'Comentarios', desc: 'Caja de texto de observaciones' },
+          ].map((col) => (
+            <div key={col.key} className="border border-gray-200 rounded-xl p-4 flex items-center justify-between hover:border-indigo-200 transition-colors">
+              <div>
+                <h4 className="font-bold text-gray-900 text-sm">{col.label}</h4>
+                <p className="text-xs text-gray-500">{col.desc}</p>
+              </div>
+              <button 
+                onClick={() => toggleSetting(col.key)}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${localSettings[col.key] !== 'false' ? 'bg-indigo-500' : 'bg-gray-200'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${localSettings[col.key] !== 'false' ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

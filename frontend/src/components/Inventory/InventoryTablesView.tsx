@@ -6,6 +6,7 @@
 
 import React, { useState } from 'react';
 import { useInventory, type InventoryItem } from '../../context/InventoryContext';
+import { useSettings } from '../../context/SettingsContext';
 import { ReportGenerator } from '../Reports/ReportGenerator';
 import { motion } from 'framer-motion';
 import { AlertCircle, FileSpreadsheet, Search, Check, RefreshCw, ChevronDown } from 'lucide-react';
@@ -232,6 +233,9 @@ const InlineTextInput: React.FC<{
 
 export const InventoryTablesView: React.FC = () => {
   const { inventory, loading, fetchData, activeArea } = useInventory();
+  const { settings } = useSettings();
+
+  const isCol = (key: string) => settings[key] !== 'false';
 
   if (activeArea !== 'Armado') {
     return (
@@ -341,37 +345,37 @@ export const InventoryTablesView: React.FC = () => {
                             <th className="p-4 text-xs font-bold text-gray-500 uppercase">Cajas Desarmadas</th>
                             <th className="p-4 text-xs font-bold text-gray-500 uppercase">Cajas Armadas</th>
                             <th className="p-4 text-xs font-bold text-gray-500 uppercase text-center">TOTAL</th>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">Consumido</th>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">Merma</th>
+                            {isCol('col_consumido_enabled') && <th className="p-4 text-xs font-bold text-gray-500 uppercase">Consumido</th>}
+                            {isCol('col_merma_enabled') && <th className="p-4 text-xs font-bold text-gray-500 uppercase">Merma</th>}
                             <th className="p-4 text-xs font-bold text-gray-500 uppercase">Cierre Turno</th>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">Requerimiento</th>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">Comentarios</th>
+                            {isCol('col_req_enabled') && <th className="p-4 text-xs font-bold text-gray-500 uppercase">Requerimiento</th>}
+                            {isCol('col_comentarios_enabled') && <th className="p-4 text-xs font-bold text-gray-500 uppercase">Comentarios</th>}
                           </>
                         ) : section.type === 'acevichado' ? (
                           <>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">S. Inicial</th>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">Ingreso</th>
+                            {isCol('col_ingreso_enabled') && <th className="p-4 text-xs font-bold text-gray-500 uppercase">S. Inicial</th>}
+                            {isCol('col_ingreso_enabled') && <th className="p-4 text-xs font-bold text-gray-500 uppercase">Ingreso</th>}
                             <th className="p-4 text-xs font-bold text-gray-500 uppercase text-center">TOTAL</th>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">Producción</th>
+                            {isCol('col_produccion_enabled') && <th className="p-4 text-xs font-bold text-gray-500 uppercase">Producción</th>}
                             <th className="p-4 text-xs font-bold text-gray-500 uppercase">Restante</th>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">Requerimiento</th>
+                            {isCol('col_req_enabled') && <th className="p-4 text-xs font-bold text-gray-500 uppercase">Requerimiento</th>}
                           </>
                         ) : section.type === 'salseros' ? (
                           <>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">S. Inicial</th>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">Ingreso</th>
+                            {isCol('col_ingreso_enabled') && <th className="p-4 text-xs font-bold text-gray-500 uppercase">S. Inicial</th>}
+                            {isCol('col_ingreso_enabled') && <th className="p-4 text-xs font-bold text-gray-500 uppercase">Ingreso</th>}
                             <th className="p-4 text-xs font-bold text-gray-500 uppercase text-center">TOTAL</th>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">Consumido</th>
+                            {isCol('col_consumido_enabled') && <th className="p-4 text-xs font-bold text-gray-500 uppercase">Consumido</th>}
                             <th className="p-4 text-xs font-bold text-gray-500 uppercase">S. Final</th>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">Requerimiento</th>
+                            {isCol('col_req_enabled') && <th className="p-4 text-xs font-bold text-gray-500 uppercase">Requerimiento</th>}
                           </>
                         ) : (
                           <>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">S. Inicial</th>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">Ingreso</th>
+                            {isCol('col_ingreso_enabled') && <th className="p-4 text-xs font-bold text-gray-500 uppercase">S. Inicial</th>}
+                            {isCol('col_ingreso_enabled') && <th className="p-4 text-xs font-bold text-gray-500 uppercase">Ingreso</th>}
                             <th className="p-4 text-xs font-bold text-gray-500 uppercase text-center">TOTAL</th>
                             <th className="p-4 text-xs font-bold text-gray-500 uppercase">S. Final</th>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">Requerimiento</th>
+                            {isCol('col_req_enabled') && <th className="p-4 text-xs font-bold text-gray-500 uppercase">Requerimiento</th>}
                           </>
                         )}
                       </tr>
@@ -388,43 +392,43 @@ export const InventoryTablesView: React.FC = () => {
                               <td className="p-4 text-center">
                                 <span className={getTotalCellStyle(item.total, item.category)}>{item.total}</span>
                               </td>
-                              <td className="p-4"><InlineNumberInput item={item} field="consumido" /></td>
-                              <td className="p-4"><InlineNumberInput item={item} field="merma" /></td>
+                              {isCol('col_consumido_enabled') && <td className="p-4"><InlineNumberInput item={item} field="consumido" /></td>}
+                              {isCol('col_merma_enabled') && <td className="p-4"><InlineNumberInput item={item} field="merma" /></td>}
                               <td className="p-4 text-sm font-bold text-gray-900">{item.cierre_turno}</td>
-                              <td className="p-4">{getReqBadge(item.requerimiento)}</td>
-                              <td className="p-4 min-w-[150px]"><InlineTextInput item={item} field="comentarios" /></td>
+                              {isCol('col_req_enabled') && <td className="p-4">{getReqBadge(item.requerimiento)}</td>}
+                              {isCol('col_comentarios_enabled') && <td className="p-4 min-w-[150px]"><InlineTextInput item={item} field="comentarios" /></td>}
                             </>
                           ) : section.type === 'acevichado' ? (
                             <>
-                              <td className="p-4"><InlineNumberInput item={item} field="s_inicial" /></td>
-                              <td className="p-4"><InlineNumberInput item={item} field="ingreso" /></td>
+                              {isCol('col_ingreso_enabled') && <td className="p-4"><InlineNumberInput item={item} field="s_inicial" /></td>}
+                              {isCol('col_ingreso_enabled') && <td className="p-4"><InlineNumberInput item={item} field="ingreso" /></td>}
                               <td className="p-4 text-center">
                                 <span className={getTotalCellStyle(item.total, item.category)}>{item.total}</span>
                               </td>
-                              <td className="p-4"><InlineNumberInput item={item} field="produccion" /></td>
+                              {isCol('col_produccion_enabled') && <td className="p-4"><InlineNumberInput item={item} field="produccion" /></td>}
                               <td className="p-4 text-sm font-bold text-gray-900">{item.restante}</td>
-                              <td className="p-4">{getReqBadge(item.requerimiento)}</td>
+                              {isCol('col_req_enabled') && <td className="p-4">{getReqBadge(item.requerimiento)}</td>}
                             </>
                           ) : section.type === 'salseros' ? (
                             <>
-                              <td className="p-4"><InlineNumberInput item={item} field="s_inicial" /></td>
-                              <td className="p-4"><InlineNumberInput item={item} field="ingreso" /></td>
+                              {isCol('col_ingreso_enabled') && <td className="p-4"><InlineNumberInput item={item} field="s_inicial" /></td>}
+                              {isCol('col_ingreso_enabled') && <td className="p-4"><InlineNumberInput item={item} field="ingreso" /></td>}
                               <td className="p-4 text-center">
                                 <span className={getTotalCellStyle(item.total, item.category)}>{item.total}</span>
                               </td>
-                              <td className="p-4"><InlineNumberInput item={item} field="consumido" /></td>
+                              {isCol('col_consumido_enabled') && <td className="p-4"><InlineNumberInput item={item} field="consumido" /></td>}
                               <td className="p-4 text-sm font-bold text-gray-900">{item.s_final}</td>
-                              <td className="p-4">{getReqBadge(item.requerimiento)}</td>
+                              {isCol('col_req_enabled') && <td className="p-4">{getReqBadge(item.requerimiento)}</td>}
                             </>
                           ) : (
                             <>
-                              <td className="p-4"><InlineNumberInput item={item} field="s_inicial" /></td>
-                              <td className="p-4"><InlineNumberInput item={item} field="ingreso" /></td>
+                              {isCol('col_ingreso_enabled') && <td className="p-4"><InlineNumberInput item={item} field="s_inicial" /></td>}
+                              {isCol('col_ingreso_enabled') && <td className="p-4"><InlineNumberInput item={item} field="ingreso" /></td>}
                               <td className="p-4 text-center">
                                 <span className={getTotalCellStyle(item.total, item.category)}>{item.total}</span>
                               </td>
                               <td className="p-4"><InlineNumberInput item={item} field="s_final" /></td>
-                              <td className="p-4">{getReqBadge(item.requerimiento)}</td>
+                              {isCol('col_req_enabled') && <td className="p-4">{getReqBadge(item.requerimiento)}</td>}
                             </>
                           )}
                         </tr>
