@@ -543,3 +543,25 @@ export const getInventoryHistoryDetail = async (req: Request, res: Response) => 
     res.status(500).json({ error: error.message });
   }
 };
+
+export const forceReopenToday = async (req: Request, res: Response) => {
+  try {
+    const { area } = req.body;
+    if (!area) return res.status(400).json({ error: 'El área es requerida' });
+
+    const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+    const hoyServidor = (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
+
+    const db = await getDb();
+    
+    // Borramos cualquier registro cerrado de este área en el día de hoy
+    const result = await db.run(
+      "DELETE FROM inventories_history WHERE fecha = ? AND area = ? AND estado = 'Cerrado'", 
+      [hoyServidor, area]
+    );
+
+    res.json({ message: 'Inventario de hoy reabierto exitosamente. Recarga la página.' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
