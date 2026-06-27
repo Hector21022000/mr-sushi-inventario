@@ -118,8 +118,11 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Auto-login de inventario cuando cambia el usuario autenticado
   useEffect(() => {
-    if (auth.user && auth.user.status === 'active' && auth.user.area) {
-      loginUser(auth.user.fullName, auth.user.turno || 'Mañana', auth.user.area);
+    if (auth.user && auth.user.status === 'active') {
+      const areaToUse = auth.user.area || (auth.user.role === 'superadmin' ? 'Armado' : null);
+      if (areaToUse) {
+        loginUser(auth.user.fullName, auth.user.turno || 'Mañana', areaToUse);
+      }
     }
   }, [auth.user]);
 

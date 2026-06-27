@@ -118,7 +118,7 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
     const { role, status, area, turno } = req.body;
 
     const db = await getDb();
-    const targetUser = await db.get('SELECT role FROM users WHERE id = ?', [id]);
+    const targetUser = await db.get('SELECT role, status, area, turno FROM users WHERE id = ?', [id]);
     
     if (!targetUser) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -136,7 +136,13 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
 
     await db.run(
       'UPDATE users SET role = ?, status = ?, area = ?, turno = ? WHERE id = ?',
-      [role || targetUser.role, status, area || null, turno || null, id]
+      [
+        role !== undefined ? role : targetUser.role,
+        status !== undefined ? status : targetUser.status,
+        area !== undefined ? area : targetUser.area,
+        turno !== undefined ? turno : targetUser.turno,
+        id
+      ]
     );
 
     res.json({ message: 'Usuario actualizado exitosamente' });
