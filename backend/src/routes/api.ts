@@ -57,4 +57,45 @@ router.get('/test/clear-today', async (req, res) => {
   }
 });
 
+import * as xlsx from 'xlsx';
+import path from 'path';
+import fs from 'fs';
+
+router.get('/test/seed-armado', async (req, res) => {
+  try {
+    const db = await getDb();
+    const excelPath = path.resolve(process.cwd(), '../Execel/Plantilla_Control_Inventario.xlsx');
+    
+    if (!fs.existsSync(excelPath)) {
+      return res.status(404).send(`<h1>Error</h1><p>No se encontró el archivo Excel en la ruta: ${excelPath}</p>`);
+    }
+
+    const workbook = xlsx.readFile(excelPath);
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const rows = xlsx.utils.sheet_to_json<any>(sheet);
+
+    await db.run("UPDATE inventory SET is_active = 0 WHERE area = 'Armado'");
+
+    let count = 0;
+    for (const row of rows) {
+      const category = row['Categoría'] || row['Categoria'] || row['category'] || 'General';
+      const name = row['Producto'] || row['Nombre'] || row['name'];
+      const measure = row['Medida'] || row['Unidad'] || 'UND';
+
+      if (!name) continue;
+
+      await db.run(
+        `INSERT INTO inventory (category, name, measure, area, is_active) VALUES (?, ?, ?, 'Armado', 1)`,
+        [String(category).trim().toLowerCase(), String(name).trim(), String(measure).trim().toUpperCase()]
+      );
+      count++;
+    }
+
+    res.send(`<h1>Exito!</h1><p>Se insertaron ${count} productos en el área Armado a partir de tu archivo Excel original.</p><p>Puedes regresar a la aplicación y recargar la página.</p>`);
+  } catch (error: any) {
+    res.status(500).send(`<h1>Error</h1><p>${error.message}</p>`);
+  }
+});
+
 export default router;
