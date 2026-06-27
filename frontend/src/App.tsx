@@ -25,9 +25,7 @@ import {
   AlertTriangle,
   Calendar,
   LogOut,
-  CheckCircle2,
-  Coffee,
-  Utensils
+  CheckCircle2
 } from 'lucide-react';
 import logoImg from './assets/logo.png';
 
@@ -36,8 +34,6 @@ const App: React.FC = () => {
     responsable, 
     turno, 
     activeInventoryUuid, 
-    activeArea,
-    switchArea,
     isClosedToday,
     closeInventory, 
     logoutUser, 
@@ -261,35 +257,6 @@ const App: React.FC = () => {
             </button>
           </div>
         </header>
-
-        {/* MENÚ DE MÓDULOS (NAV DE ÁREAS) */}
-        <div className="bg-white border-b border-gray-100 px-6 py-2.5 flex items-center justify-start gap-4 sticky top-[73px] z-20 shadow-sm">
-          <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Módulo:</span>
-          <div className="flex items-center gap-1.5">
-            {[
-              { name: 'Armado', icon: FileSpreadsheet },
-              { name: 'Barra', icon: Coffee },
-              { name: 'Cocina', icon: Utensils }
-            ].map((module) => {
-              const Icon = module.icon;
-              const isSelected = activeArea === module.name;
-              return (
-                <button
-                  key={module.name}
-                  onClick={() => switchArea(module.name)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all hover:scale-[1.02] cursor-pointer ${
-                    isSelected
-                      ? 'bg-red-600 text-white shadow-md shadow-red-600/10'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  {module.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
 
         {/* CONTENIDO DENTRO DE VISTAS */}
         <main className="flex-grow p-6 overflow-y-auto max-w-7xl w-full mx-auto space-y-6">

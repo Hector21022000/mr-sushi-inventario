@@ -76,7 +76,7 @@ interface InventoryContextType {
   criticalItems: InventoryItem[];
   setResponsable: (name: string) => void;
   setTurno: (turno: string) => void;
-  loginUser: (encargado: string, turno: string) => Promise<void>;
+  loginUser: (encargado: string, turno: string, area: string) => Promise<void>;
   logoutUser: () => void;
   fetchData: () => Promise<void>;
   updateItem: (id: number, data: Partial<InventoryItem>) => Promise<void>;
@@ -150,23 +150,25 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   // Guardar sesión e iniciar inventario activo
-  const loginUser = async (encargado: string, turnoSeleccionado: string) => {
+  const loginUser = async (encargado: string, turnoSeleccionado: string, areaSeleccionada: string = 'Armado') => {
     setLoading(true);
     setError(null);
     try {
       // Registrar sesión en el backend
-      await axios.post(`${API_URL}/sessions`, { encargado, turno: turnoSeleccionado, area: activeArea });
+      await axios.post(`${API_URL}/sessions`, { encargado, turno: turnoSeleccionado, area: areaSeleccionada });
       
       // Actualizar localStorage y states
       setResponsableState(encargado);
       setTurnoState(turnoSeleccionado);
+      setActiveArea(areaSeleccionada);
       localStorage.setItem('mr_sushi_responsable', encargado);
       localStorage.setItem('mr_sushi_turno', turnoSeleccionado);
+      localStorage.setItem('mr_sushi_active_area', areaSeleccionada);
 
       // Obtener o crear inventario activo para este turno/usuario
       const deviceDate = getDeviceDateString();
       const activeRes = await axios.get(`${API_URL}/inventory/active`, {
-        params: { encargado, turno: turnoSeleccionado, deviceDate, area: activeArea }
+        params: { encargado, turno: turnoSeleccionado, deviceDate, area: areaSeleccionada }
       });
 
       setActiveInventoryUuid(activeRes.data.uuid);
@@ -345,9 +347,10 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     const savedResponsable = localStorage.getItem('mr_sushi_responsable');
     const savedTurno = localStorage.getItem('mr_sushi_turno');
+    const savedArea = localStorage.getItem('mr_sushi_active_area') || 'Armado';
     
     if (savedResponsable && savedTurno) {
-      loginUser(savedResponsable, savedTurno).catch(() => {
+      loginUser(savedResponsable, savedTurno, savedArea).catch(() => {
         fetchData();
       });
     } else {

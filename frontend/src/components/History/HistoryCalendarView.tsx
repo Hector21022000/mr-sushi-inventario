@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, ChevronLeft, ChevronRight, User, Clock, FileText, CheckCircle2, X, ChevronDown } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock, FileText, CheckCircle2, X, ChevronDown } from 'lucide-react';
 import { ReportGenerator } from '../Reports/ReportGenerator';
 import { type InventoryItem } from '../../context/InventoryContext';
 
@@ -260,30 +260,21 @@ export const HistoryCalendarView: React.FC = () => {
                                 <button
                                   key={log.uuid}
                                   onClick={() => loadLogDetail(log.uuid)}
-                                  className={`w-full text-left p-3 border rounded-xl transition-all flex flex-col gap-1.5 hover:border-red-300 hover:bg-red-50/10 cursor-pointer ${
+                                  className={`w-full text-left p-2.5 px-3 border rounded-xl transition-all flex items-center justify-between hover:border-red-300 hover:bg-red-50/10 cursor-pointer ${
                                     activeLogDetail?.uuid === log.uuid
-                                      ? 'border-red-500 bg-red-50/30 shadow-xs'
+                                      ? 'border-red-500 bg-red-50/30 shadow-xs font-bold'
                                       : 'border-gray-100 bg-white'
                                   }`}
                                 >
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-white bg-red-600 px-1.5 py-0.5 rounded-full">
-                                      Turno {log.turno}
-                                    </span>
-                                    <span className="text-[9px] text-gray-400 font-semibold flex items-center gap-0.5">
-                                      <Clock className="w-2.5 h-2.5" />
-                                      {log.hora}
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-700">
+                                      • <strong className="text-gray-900">{log.encargado}</strong> — Turno {log.turno}
                                     </span>
                                   </div>
-                                  <div className="text-[11px] text-gray-700 font-semibold flex items-center gap-1.5">
-                                    <User className="w-3.5 h-3.5 text-gray-400" />
-                                    {log.encargado}
-                                  </div>
-                                  {log.observaciones && (
-                                    <p className="text-[9px] text-gray-400 italic truncate">
-                                      Obs: {log.observaciones}
-                                    </p>
-                                  )}
+                                  <span className="text-[9px] text-gray-400 font-semibold flex items-center gap-0.5">
+                                    <Clock className="w-2.5 h-2.5" />
+                                    {log.hora}
+                                  </span>
                                 </button>
                               ))
                             ) : (
