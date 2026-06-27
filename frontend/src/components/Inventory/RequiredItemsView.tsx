@@ -10,25 +10,7 @@ import { motion } from 'framer-motion';
 import { ShoppingCart, MessageSquare, Check, AlertCircle } from 'lucide-react';
 
 export const RequiredItemsView: React.FC = () => {
-  const { criticalItems, responsable, activeArea } = useInventory();
-
-  if (activeArea !== 'Armado') {
-    return (
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 text-center max-w-2xl mx-auto space-y-4 my-8">
-        <div className="p-4 bg-red-50 text-red-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto">
-          <ShoppingCart className="w-8 h-8" />
-        </div>
-        <h3 className="text-lg font-bold text-gray-900">Lista de Compras de {activeArea}</h3>
-        <p className="text-sm text-gray-500 leading-relaxed font-semibold">
-          El módulo de <strong>{activeArea}</strong> no tiene configurada una lista de compras de reposición en este momento.
-        </p>
-        <p className="text-xs text-gray-400">
-          Las alertas e indicaciones de abastecimiento se mostrarán aquí una vez que definas los límites críticos de tus insumos de {activeArea}.
-        </p>
-      </div>
-    );
-  }
-
+  const { criticalItems, responsable } = useInventory();
   const [copied, setCopied] = useState<boolean>(false);
 
   const copyToClipboard = () => {

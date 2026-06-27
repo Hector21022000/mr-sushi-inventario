@@ -255,21 +255,24 @@ export async function initDb() {
     { category: 'gaseosas', name: 'INKA ZERO 500 ML', measure: 'UND' }
   ];
 
-  for (const product of initialProducts) {
-    const existing = await db.get(
-      'SELECT id FROM inventory WHERE category = ? AND name = ?',
-      [product.category, product.name]
-    );
-
-    if (!existing) {
-      // Calcular valores iniciales
-      const total = 0;
-      const calculatedReq = calculateRequerimiento(product.category, product.name, total, 0, 0);
-
-      await db.run(
-        `INSERT INTO inventory (category, name, measure, total, requerimiento) VALUES (?, ?, ?, ?, ?)`,
-        [product.category, product.name, product.measure, total, calculatedReq]
+  const areas = ['Armado', 'Barra', 'Cocina'];
+  for (const ar of areas) {
+    for (const product of initialProducts) {
+      const existing = await db.get(
+        'SELECT id FROM inventory WHERE category = ? AND name = ? AND area = ?',
+        [product.category, product.name, ar]
       );
+
+      if (!existing) {
+        // Calcular valores iniciales
+        const total = 0;
+        const calculatedReq = calculateRequerimiento(product.category, product.name, total, 0, 0);
+
+        await db.run(
+          `INSERT INTO inventory (category, name, measure, total, requerimiento, area) VALUES (?, ?, ?, ?, ?, ?)`,
+          [product.category, product.name, product.measure, total, calculatedReq, ar]
+        );
+      }
     }
   }
 
