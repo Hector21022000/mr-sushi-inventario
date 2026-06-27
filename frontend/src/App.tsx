@@ -35,7 +35,7 @@ import logoImg from './assets/logo.png';
 
 const AppContent: React.FC = () => {
   const { user, logout, loading } = useAuth();
-  const { closeInventory, isClosedToday, criticalItems, error } = useInventory();
+  const { activeArea, switchArea, closeInventory, isClosedToday, criticalItems, error } = useInventory();
   
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
@@ -219,6 +219,19 @@ const AppContent: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Selector de Área Rápido para Admins */}
+            {(isSuperadmin || isAdmin) && (
+              <select
+                value={activeArea || ''}
+                onChange={(e) => switchArea(e.target.value)}
+                className="hidden sm:block bg-red-50 text-red-700 font-bold border border-red-200 rounded-xl px-3 py-1.5 text-xs focus:ring-2 focus:ring-red-600 focus:outline-none"
+              >
+                <option value="Armado">Área: Armado</option>
+                <option value="Cocina">Área: Cocina</option>
+                <option value="Barra">Área: Barra</option>
+              </select>
+            )}
+
             {/* Responsable Rápido en Cabecera (Desktop) */}
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-xl border border-gray-100 text-xs">
               <User className="w-3.5 h-3.5 text-gray-400" />

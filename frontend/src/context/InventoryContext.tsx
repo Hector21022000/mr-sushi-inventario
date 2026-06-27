@@ -199,13 +199,14 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Cambiar de área de inventario
   const switchArea = async (newArea: string) => {
     localStorage.setItem('mr_sushi_active_area', newArea);
-    if (responsable && turno) {
+    const currentTurno = turno || 'Mañana';
+    if (responsable) {
       setLoading(true);
       setError(null);
       try {
         const deviceDate = getDeviceDateString();
         const activeRes = await axios.get(`${API_URL}/inventory/active`, {
-          params: { encargado: responsable, turno, deviceDate, area: newArea }
+          params: { encargado: responsable, turno: currentTurno, deviceDate, area: newArea }
         });
         setActiveInventoryUuid(activeRes.data.uuid);
         setActiveInventoryDate(activeRes.data.fecha);

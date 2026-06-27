@@ -152,7 +152,7 @@ export const UserManagement: React.FC = () => {
 
                   <td className="px-6 py-4">
                     <select 
-                      disabled={user.role !== 'superadmin' || u.id === user.id}
+                      disabled={user.role !== 'superadmin'}
                       value={u.area || ''}
                       onChange={(e) => handleUpdate(u.id, { area: e.target.value || null })}
                       className="bg-transparent border border-gray-200 rounded-lg px-2 py-1 text-sm font-medium focus:ring-2 focus:ring-red-600 focus:outline-none"
@@ -166,7 +166,7 @@ export const UserManagement: React.FC = () => {
 
                   <td className="px-6 py-4">
                     <select 
-                      disabled={user.role !== 'superadmin' || u.id === user.id}
+                      disabled={user.role !== 'superadmin'}
                       value={u.turno || ''}
                       onChange={(e) => handleUpdate(u.id, { turno: e.target.value || null })}
                       className="bg-transparent border border-gray-200 rounded-lg px-2 py-1 text-sm font-medium focus:ring-2 focus:ring-red-600 focus:outline-none"
