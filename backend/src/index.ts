@@ -10,7 +10,6 @@ import dotenv from 'dotenv';
 import path from 'path';
 import apiRoutes from './routes/api';
 import authRoutes from './routes/auth';
-import inventoryRoutes from './routes/inventory';
 import formatRoutes from './routes/formats';
 import settingsRoutes from './routes/settings';
 import { initDb } from './db/database';
@@ -28,7 +27,6 @@ app.use(express.json());
 
 // Servir la API
 app.use('/api/auth', authRoutes);
-app.use('/api/inventory', inventoryRoutes);
 app.use('/api/formats', formatRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api', apiRoutes);
