@@ -154,8 +154,9 @@ export async function initDb() {
       produccion REAL DEFAULT 0,
       requerimiento TEXT DEFAULT '',
       comentarios TEXT DEFAULT '',
+      area TEXT DEFAULT 'Armado',
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(category, name)
+      UNIQUE(category, name, area)
     )
   `);
 
@@ -306,6 +307,20 @@ export async function initDb() {
     await db.exec(`ALTER TABLE inventory ADD COLUMN area TEXT DEFAULT 'Armado'`);
   } catch (e) {
     // Falla silenciosamente si la columna ya existe
+  }
+
+  // Migración para Neon (PostgreSQL): reemplazar la restricción UNIQUE anterior
+  if (process.env.DATABASE_URL) {
+    try {
+      await db.exec(`ALTER TABLE inventory DROP CONSTRAINT inventory_category_name_key`);
+    } catch (e) {
+      // Ignorar si no existe
+    }
+    try {
+      await db.exec(`ALTER TABLE inventory ADD CONSTRAINT inventory_category_name_area_key UNIQUE (category, name, area)`);
+    } catch (e) {
+      // Ignorar si ya existe
+    }
   }
 
   try {
