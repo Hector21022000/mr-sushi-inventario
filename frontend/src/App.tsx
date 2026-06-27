@@ -33,6 +33,7 @@ const App: React.FC = () => {
     responsable, 
     turno, 
     activeInventoryUuid, 
+    isClosedToday,
     closeInventory, 
     logoutUser, 
     criticalItems, 
@@ -105,19 +106,21 @@ const App: React.FC = () => {
               Turno: {turno}
             </div>
             <div className="pt-2 flex flex-col gap-1.5">
-              <button
-                onClick={closeInventory}
-                className="w-full py-2 px-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors shadow-sm"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Cerrar Inventario
-              </button>
+              {turno === 'Noche' && !isClosedToday && (
+                <button
+                  onClick={closeInventory}
+                  className="w-full py-2 px-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors shadow-sm animate-pulse"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Finalizar Inventario del Día
+                </button>
+              )}
               <button
                 onClick={logoutUser}
                 className="w-full py-1.5 px-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                Salir (Logout)
+                Guardar y Salir
               </button>
             </div>
           </div>
@@ -173,19 +176,21 @@ const App: React.FC = () => {
                 <span className="text-[9px] font-bold text-gray-400 uppercase block">Sesión Activa</span>
                 <div className="text-xs font-bold text-gray-800 truncate">{responsable} ({turno})</div>
                 <div className="flex flex-col gap-1 pt-1">
-                  <button
-                    onClick={closeInventory}
-                    className="w-full py-1.5 px-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[9px] font-bold uppercase flex items-center justify-center gap-1"
-                  >
-                    <CheckCircle2 className="w-3 h-3" />
-                    Cerrar Inventario
-                  </button>
+                  {turno === 'Noche' && !isClosedToday && (
+                    <button
+                      onClick={closeInventory}
+                      className="w-full py-1.5 px-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[9px] font-bold uppercase flex items-center justify-center gap-1"
+                    >
+                      <CheckCircle2 className="w-3 h-3" />
+                      Finalizar Inventario del Día
+                    </button>
+                  )}
                   <button
                     onClick={logoutUser}
                     className="w-full py-1 px-2 bg-gray-100 text-gray-600 rounded-lg text-[9px] font-bold uppercase flex items-center justify-center gap-1"
                   >
                     <LogOut className="w-3 h-3" />
-                    Salir
+                    Guardar y Salir
                   </button>
                 </div>
               </div>
@@ -252,6 +257,14 @@ const App: React.FC = () => {
         {/* CONTENIDO DENTRO DE VISTAS */}
         <main className="flex-grow p-6 overflow-y-auto max-w-7xl w-full mx-auto space-y-6">
           
+          {/* Banner de inventario cerrado */}
+          {isClosedToday && (
+            <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl text-sm font-semibold shadow-xs">
+              <CheckCircle2 className="w-5 h-5 text-amber-600 shrink-0" />
+              <span>Este inventario ya ha sido cerrado oficialmente y no admite modificaciones (Modo Consulta).</span>
+            </div>
+          )}
+
           {/* Banner de alerta de error del backend */}
           {error && (
             <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 text-red-800 rounded-2xl text-sm font-semibold">

@@ -36,6 +36,7 @@ export const HistoryCalendarView: React.FC = () => {
     encargado: string;
     turno: string;
     productos: InventoryItem[];
+    responsables?: Record<string, any>;
     estado: string;
   } | null>(null);
   const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
@@ -337,7 +338,8 @@ export const HistoryCalendarView: React.FC = () => {
                       encargado: activeLogDetail.encargado,
                       turno: activeLogDetail.turno,
                       fecha: activeLogDetail.fecha,
-                      hora: activeLogDetail.hora
+                      hora: activeLogDetail.hora,
+                      responsables: activeLogDetail.responsables
                     }}
                   />
                 </div>

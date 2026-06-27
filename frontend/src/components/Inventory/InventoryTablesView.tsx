@@ -64,7 +64,7 @@ const InlineNumberInput: React.FC<{
   field: keyof InventoryItem;
   placeholder?: string;
 }> = ({ item, field, placeholder = '0' }) => {
-  const { updateItem } = useInventory();
+  const { updateItem, isClosedToday } = useInventory();
   const [val, setVal] = useState<string>(String(item[field] ?? '0'));
   const [saved, setSaved] = useState<boolean>(false);
   const [isFocused, setIsFocused] = useState<boolean>(false);
@@ -122,27 +122,39 @@ const InlineNumberInput: React.FC<{
 
   return (
     <div className="relative flex items-center justify-center">
-      <div className="relative flex items-center bg-gray-50 border border-gray-200 rounded-lg focus-within:bg-white focus-within:border-red-500 transition-all w-20 md:w-24">
+      <div className={`relative flex items-center border rounded-lg transition-all w-20 md:w-24 ${
+        isClosedToday
+          ? 'bg-gray-100/80 border-gray-200 cursor-not-allowed'
+          : 'bg-gray-50 border-gray-200 focus-within:bg-white focus-within:border-red-500'
+      }`}>
         <input
           type="text"
           value={val === '0' && field !== 'comentarios' ? '' : val}
           onChange={handleChange}
           onFocus={() => {
+            if (isClosedToday) return;
             setIsFocused(true);
             setShowDropdown(true);
           }}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="w-full bg-transparent border-0 py-1 pl-2 pr-6 text-center text-sm font-medium text-gray-800 focus:outline-none focus:ring-0"
+          disabled={isClosedToday}
+          className={`w-full bg-transparent border-0 py-1 pl-2 pr-6 text-center text-sm font-medium text-gray-800 focus:outline-none focus:ring-0 ${
+            isClosedToday ? 'cursor-not-allowed text-gray-400' : ''
+          }`}
         />
         <button
           type="button"
+          disabled={isClosedToday}
           onMouseDown={(e) => {
+            if (isClosedToday) return;
             e.preventDefault(); // Previene blur del input
             setShowDropdown(!showDropdown);
           }}
-          className="absolute right-1 text-gray-400 hover:text-gray-600 focus:outline-none"
+          className={`absolute right-1 focus:outline-none ${
+            isClosedToday ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-gray-600'
+          }`}
         >
           <ChevronDown className="w-3.5 h-3.5" />
         </button>
@@ -180,7 +192,7 @@ const InlineTextInput: React.FC<{
   item: InventoryItem;
   field: keyof InventoryItem;
 }> = ({ item, field }) => {
-  const { updateItem } = useInventory();
+  const { updateItem, isClosedToday } = useInventory();
   const [val, setVal] = useState<string>(String(item[field] ?? ''));
   const [isFocused, setIsFocused] = useState<boolean>(false);
 
@@ -202,10 +214,18 @@ const InlineTextInput: React.FC<{
       type="text"
       value={val}
       onChange={(e) => setVal(e.target.value)}
-      onFocus={() => setIsFocused(true)}
+      onFocus={() => {
+        if (isClosedToday) return;
+        setIsFocused(true);
+      }}
       onBlur={handleBlur}
-      placeholder="Comentario..."
-      className="w-full bg-transparent border-b border-transparent hover:border-gray-200 focus:border-red-500 focus:outline-none py-0.5 px-1 text-sm text-gray-600 transition-colors"
+      disabled={isClosedToday}
+      placeholder={isClosedToday ? "" : "Comentario..."}
+      className={`w-full bg-transparent border-b border-transparent focus:outline-none py-0.5 px-1 text-sm text-gray-600 transition-colors ${
+        isClosedToday
+          ? 'cursor-not-allowed text-gray-400'
+          : 'hover:border-gray-200 focus:border-red-500'
+      }`}
     />
   );
 };

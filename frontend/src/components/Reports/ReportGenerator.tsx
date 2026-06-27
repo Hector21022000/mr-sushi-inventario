@@ -20,6 +20,7 @@ interface ReportGeneratorProps {
     turno: string;
     fecha: string;
     hora: string;
+    responsables?: Record<string, any> | null;
   };
 }
 
@@ -71,7 +72,7 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
   historicalData,
   historicalMeta
 }) => {
-  const { inventory, stats: currentStats, criticalItems: currentCriticals, responsable: currentResponsable, turno: currentTurno } = useInventory();
+  const { inventory, stats: currentStats, criticalItems: currentCriticals, responsable: currentResponsable, turno: currentTurno, responsables: currentResponsables } = useInventory();
   const [exporting, setExporting] = useState<string | null>(null);
   const [saveNotification, setSaveNotification] = useState<string | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -89,7 +90,8 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
     encargado: currentResponsable || 'Responsable',
     turno: currentTurno || 'No especificado',
     fecha: new Date().toLocaleDateString('es-PE'),
-    hora: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+    hora: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
+    responsables: currentResponsables
   };
 
   const getFormattedDateTime = () => {
@@ -145,10 +147,12 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
         { Indicador: 'Stock Bajo / Reposición (Naranja)', Cantidad: stats.bajo },
         { Indicador: 'Stock Crítico (Rojo)', Cantidad: stats.critico },
         { Indicador: 'Sin Stock (Agotado)', Cantidad: stats.sinStock },
-        { Indicador: 'Responsable de Reporte', Cantidad: reportMeta.encargado },
-        { Indicador: 'Turno de Reporte', Cantidad: reportMeta.turno },
-        { Indicador: 'Fecha del Reporte', Cantidad: reportMeta.fecha },
-        { Indicador: 'Hora de Cierre', Cantidad: reportMeta.hora }
+        { Indicador: 'Encargado Turno Mañana', Cantidad: reportMeta.responsables?.Mañana?.encargado || '-' },
+        { Indicador: 'Encargado Turno Tarde', Cantidad: reportMeta.responsables?.Tarde?.encargado || '-' },
+        { Indicador: 'Encargado Turno Noche', Cantidad: reportMeta.responsables?.Noche?.encargado || '-' },
+        { Indicador: 'Cierre Definitivo Por', Cantidad: reportMeta.encargado },
+        { Indicador: 'Fecha del Cierre', Cantidad: reportMeta.fecha },
+        { Indicador: 'Hora del Cierre', Cantidad: reportMeta.hora }
       ];
       const wsSummary = XLSX.utils.json_to_sheet(summaryData);
       XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumen KPIs');
@@ -508,19 +512,28 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
           </div>
 
           {/* Pie de Página del Reporte Firmado */}
-          <div className="border-t-2 border-gray-200 pt-6 mt-8 flex justify-between items-start text-xs text-gray-400">
+          <div className="border-t-2 border-gray-200 pt-6 mt-8 flex flex-col md:flex-row justify-between items-start text-xs text-gray-400 gap-6">
             <div>
               <p className="font-semibold text-gray-600">© {new Date().getFullYear()} MR·SUSHI S.A.C. Todos los derechos reservados.</p>
-              <p className="text-[10px] text-gray-400 mt-1">Generado por el Sistema Inteligente de Control de Inventario.</p>
+              <p className="text-[10px] text-gray-400 mt-1">Generado por el Sistema Inteligente de Control de Inventario acumulado diario.</p>
             </div>
-            <div className="flex gap-12 text-gray-800 text-sm font-semibold">
-              <div className="flex flex-col gap-1 border-r border-gray-100 pr-12 text-right">
-                <p>Encargado: <span className="font-extrabold text-red-600">{reportMeta.encargado}</span></p>
-                <p>Turno: <span className="font-extrabold text-red-600">{reportMeta.turno}</span></p>
+            
+            {/* Firmas y responsables por turno */}
+            <div className="flex flex-wrap gap-6 text-gray-800 text-xs font-semibold">
+              <div className="flex flex-col p-3 bg-gray-50 border border-gray-100 rounded-xl min-w-[120px]">
+                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Turno Mañana</span>
+                <span className="text-gray-700 font-bold mt-1 truncate">{reportMeta.responsables?.Mañana?.encargado || 'No registrado'}</span>
+                <span className="text-[10px] text-gray-400 font-semibold">{reportMeta.responsables?.Mañana?.ingreso ? `Ingreso: ${reportMeta.responsables.Mañana.ingreso}` : '-'}</span>
               </div>
-              <div className="flex flex-col gap-1 text-right">
-                <p>Fecha: <span className="font-extrabold text-gray-900">{reportMeta.fecha}</span></p>
-                <p>Hora de Cierre: <span className="font-extrabold text-gray-900">{reportMeta.hora}</span></p>
+              <div className="flex flex-col p-3 bg-gray-50 border border-gray-100 rounded-xl min-w-[120px]">
+                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Turno Tarde</span>
+                <span className="text-gray-700 font-bold mt-1 truncate">{reportMeta.responsables?.Tarde?.encargado || 'No registrado'}</span>
+                <span className="text-[10px] text-gray-400 font-semibold">{reportMeta.responsables?.Tarde?.ingreso ? `Ingreso: ${reportMeta.responsables.Tarde.ingreso}` : '-'}</span>
+              </div>
+              <div className="flex flex-col p-3 bg-red-50 border border-red-100 rounded-xl min-w-[140px]">
+                <span className="text-[9px] text-red-500 font-bold uppercase tracking-wider block">Cierre Definitivo</span>
+                <span className="text-red-700 font-bold mt-1 truncate">{reportMeta.encargado} (Turno {reportMeta.turno})</span>
+                <span className="text-[10px] text-red-500 font-semibold">Cierre: {reportMeta.fecha} {reportMeta.hora}</span>
               </div>
             </div>
           </div>

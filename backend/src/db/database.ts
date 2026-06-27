@@ -169,6 +169,7 @@ export async function initDb() {
       value_old TEXT NOT NULL,
       value_new TEXT NOT NULL,
       responsable TEXT NOT NULL,
+      turno TEXT DEFAULT '',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -193,6 +194,7 @@ export async function initDb() {
       encargado TEXT NOT NULL,
       turno TEXT NOT NULL,
       productos TEXT NOT NULL,
+      responsables TEXT DEFAULT '{}',
       observaciones TEXT DEFAULT '',
       estado TEXT DEFAULT 'Abierto',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -276,6 +278,19 @@ export async function initDb() {
   for (const item of allItems) {
     const req = calculateRequerimiento(item.category, item.name, item.total, item.s_final, item.restante);
     await db.run('UPDATE inventory SET requerimiento = ? WHERE id = ?', [req, item.id]);
+  }
+
+  // Actualizar esquema de BD para bases de datos existentes de forma segura
+  try {
+    await db.exec(`ALTER TABLE history ADD COLUMN turno TEXT DEFAULT ''`);
+  } catch (e) {
+    // Falla silenciosamente si la columna ya existe
+  }
+  
+  try {
+    await db.exec(`ALTER TABLE inventories_history ADD COLUMN responsables TEXT DEFAULT '{}'`);
+  } catch (e) {
+    // Falla silenciosamente si la columna ya existe
   }
 
   console.log('Database initialized, seeded, and requirements updated.');

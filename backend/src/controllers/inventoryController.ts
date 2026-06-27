@@ -30,7 +30,9 @@ export const updateInventoryItem = async (req: Request, res: Response) => {
     s_final,
     produccion,
     comentarios,
-    responsable = 'Sistema'
+    responsable = 'Sistema',
+    activeInventoryUuid,
+    turno = ''
   } = req.body;
 
   try {
@@ -140,10 +142,47 @@ export const updateInventoryItem = async (req: Request, res: Response) => {
         }
 
         await db.run(
-          `INSERT INTO history (product_id, product_name, field_changed, value_old, value_new, responsable)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [id, name, item.label, oldValStr || '0', newValStr || '0', responsable]
+          `INSERT INTO history (product_id, product_name, field_changed, value_old, value_new, responsable, turno)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [id, name, item.label, oldValStr || '0', newValStr || '0', responsable, turno]
         );
+      }
+    }
+
+    // Si hay un inventario histórico activo asociado, sincronizar el JSON del producto de inmediato
+    if (activeInventoryUuid) {
+      const activeInv = await db.get('SELECT productos FROM inventories_history WHERE uuid = ?', [activeInventoryUuid]);
+      if (activeInv) {
+        try {
+          const products = JSON.parse(activeInv.productos);
+          const idx = products.findIndex((p: any) => p.name === name && p.category === category);
+          if (idx !== -1) {
+            products[idx] = {
+              ...products[idx],
+              cajas_desarmadas: next_cajas_desarmadas,
+              cajas_armadas: next_cajas_armadas,
+              s_inicial: next_s_inicial,
+              ingreso: next_ingreso,
+              total,
+              consumido: next_consumido,
+              cierre_turno,
+              merma: next_merma,
+              s_final: next_s_final,
+              restante,
+              produccion: next_produccion,
+              requerimiento,
+              comentarios: next_comentarios,
+              updated_at: new Date().toISOString()
+            };
+
+            await db.run(
+              'UPDATE inventories_history SET productos = ?, updated_at = CURRENT_TIMESTAMP WHERE uuid = ?',
+              [JSON.stringify(products), activeInventoryUuid]
+            );
+          }
+        } catch (e) {
+          console.error('Error sincronizando item modificado en JSON de snapshot:', e);
+        }
       }
     }
 
@@ -184,34 +223,59 @@ export const getActiveInventory = async (req: Request, res: Response) => {
 
   try {
     const db = await getDb();
-    const hoy = new Date().toISOString().split('T')[0];
+    // Obtener la fecha local YYYY-MM-DD
+    const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+    const hoy = (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
 
-    // 1. Buscar inventario abierto para hoy, este encargado y turno
+    const ahora = new Date();
+    const horaStr = ahora.toTimeString().split(' ')[0];
+
+    // 1. Buscar inventario abierto para hoy (independientemente del turno/encargado)
     let active = await db.get(
       `SELECT * FROM inventories_history 
-       WHERE encargado = ? AND turno = ? AND fecha = ? AND estado = 'Abierto'`,
-      [encargado, turno, hoy]
+       WHERE fecha = ? AND estado = 'Abierto'`,
+      [hoy]
     );
 
     if (active) {
+      let respObj: Record<string, any> = {};
+      try {
+        respObj = active.responsables ? JSON.parse(active.responsables) : {};
+      } catch (e) {
+        respObj = {};
+      }
+
+      // Registrar la sesión del encargado y turno actual
+      respObj[turno] = { encargado, ingreso: horaStr };
+
+      await db.run(
+        'UPDATE inventories_history SET responsables = ? WHERE uuid = ?',
+        [JSON.stringify(respObj), active.uuid]
+      );
+
       active.productos = JSON.parse(active.productos);
+      active.responsables = respObj;
       return res.json(active);
     }
 
-    // 2. Si no hay de hoy, pero hay uno abierto previo del mismo turno/encargado, recuperarlo
-    active = await db.get(
+    // 2. Si no hay inventario abierto hoy, verificar si ya se CERRÓ el del día de hoy
+    const closedToday = await db.get(
       `SELECT * FROM inventories_history 
-       WHERE encargado = ? AND turno = ? AND estado = 'Abierto'
-       ORDER BY fecha DESC, hora DESC LIMIT 1`,
-      [encargado, turno]
+       WHERE fecha = ? AND estado = 'Cerrado'`,
+      [hoy]
     );
 
-    if (active) {
-      active.productos = JSON.parse(active.productos);
-      return res.json(active);
+    if (closedToday) {
+      closedToday.productos = JSON.parse(closedToday.productos);
+      try {
+        closedToday.responsables = closedToday.responsables ? JSON.parse(closedToday.responsables) : {};
+      } catch (e) {
+        closedToday.responsables = {};
+      }
+      return res.json(closedToday);
     }
 
-    // 3. Crear una nueva sesión de inventario: inicializar items heredando del turno anterior
+    // 3. Crear el nuevo inventario para hoy (primer inicio de sesión del día)
     const baseItems = await db.all('SELECT * FROM inventory ORDER BY category ASC, id ASC');
 
     // Buscar el último inventario cerrado en general para heredar stocks
@@ -264,13 +328,13 @@ export const getActiveInventory = async (req: Request, res: Response) => {
     });
 
     const newUuid = crypto.randomUUID();
-    const ahora = new Date();
-    const horaStr = ahora.toTimeString().split(' ')[0];
+    const respObj: Record<string, any> = {};
+    respObj[turno] = { encargado, ingreso: horaStr };
 
     await db.run(
-      `INSERT INTO inventories_history (uuid, fecha, hora, encargado, turno, productos, estado)
-       VALUES (?, ?, ?, ?, ?, ?, 'Abierto')`,
-      [newUuid, hoy, horaStr, encargado, turno, JSON.stringify(newProducts)]
+      `INSERT INTO inventories_history (uuid, fecha, hora, encargado, turno, productos, responsables, estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'Abierto')`,
+      [newUuid, hoy, horaStr, encargado, turno, JSON.stringify(newProducts), JSON.stringify(respObj)]
     );
 
     const created = {
@@ -280,6 +344,7 @@ export const getActiveInventory = async (req: Request, res: Response) => {
       encargado,
       turno,
       productos: newProducts,
+      responsables: respObj,
       observaciones: '',
       estado: 'Abierto'
     };
@@ -395,6 +460,11 @@ export const getInventoryHistoryDetail = async (req: Request, res: Response) => 
       return res.status(404).json({ error: 'Detalle de inventario no encontrado' });
     }
     log.productos = JSON.parse(log.productos);
+    try {
+      log.responsables = log.responsables ? JSON.parse(log.responsables) : {};
+    } catch (e) {
+      log.responsables = {};
+    }
     res.json(log);
   } catch (error: any) {
     res.status(500).json({ error: error.message });

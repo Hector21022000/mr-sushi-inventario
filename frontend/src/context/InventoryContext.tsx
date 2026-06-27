@@ -57,6 +57,8 @@ interface InventoryContextType {
   responsable: string;
   turno: string;
   activeInventoryUuid: string | null;
+  isClosedToday: boolean;
+  responsables: Record<string, any> | null;
   loading: boolean;
   error: string | null;
   stats: DashboardStats;
@@ -92,6 +94,8 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return localStorage.getItem('mr_sushi_turno') || '';
   });
   const [activeInventoryUuid, setActiveInventoryUuid] = useState<string | null>(null);
+  const [isClosedToday, setIsClosedToday] = useState<boolean>(false);
+  const [responsables, setResponsables] = useState<Record<string, any> | null>(null);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -150,6 +154,8 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       setActiveInventoryUuid(activeRes.data.uuid);
       setInventory(activeRes.data.productos);
+      setIsClosedToday(activeRes.data.estado === 'Cerrado');
+      setResponsables(activeRes.data.responsables || null);
       
       // Cargar historial
       const histRes = await axios.get<HistoryLog[]>(`${API_URL}/history`);
@@ -168,6 +174,8 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setResponsableState('');
     setTurnoState('');
     setActiveInventoryUuid(null);
+    setIsClosedToday(false);
+    setResponsables(null);
     setInventory([]);
     localStorage.removeItem('mr_sushi_responsable');
     localStorage.removeItem('mr_sushi_turno');
@@ -204,6 +212,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Actualizar un ítem de inventario en tiempo real
   const updateItem = async (id: number, data: Partial<InventoryItem>) => {
+    if (isClosedToday) return;
     try {
       // Optimistic update local para rapidez de UI
       setInventory((prev) =>
@@ -254,10 +263,12 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       );
       setHasChanges(true);
 
-      // Petición al backend de compatibilidad
+      // Petición al backend con autoguardado en tiempo real en la base de datos
       const res = await axios.put<InventoryItem>(`${API_URL}/inventory/${id}`, {
         ...data,
-        responsable
+        responsable,
+        activeInventoryUuid,
+        turno
       });
 
       // Reemplazar con los datos calculados exactamente por el servidor
@@ -403,6 +414,8 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         responsable,
         turno,
         activeInventoryUuid,
+        isClosedToday,
+        responsables,
         loading,
         error,
         stats,
