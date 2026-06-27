@@ -87,7 +87,6 @@ const AppContent: React.FC = () => {
 
   // SOLO para Superadmin
   if (isSuperadmin) {
-    menuItems.push({ id: 'formats', label: 'Gestión de Formatos', icon: FileSpreadsheet });
     menuItems.push({ id: 'settings', label: 'Configuración', icon: Settings });
     menuItems.push({ id: 'audit_log', label: 'Seguridad', icon: ShieldCheck });
   }

@@ -232,10 +232,27 @@ const InlineTextInput: React.FC<{
 };
 
 export const InventoryTablesView: React.FC = () => {
-  const { inventory, loading, fetchData } = useInventory();
+  const { inventory, loading, fetchData, activeArea } = useInventory();
   const { settings } = useSettings();
 
   const isCol = (key: string) => settings[key] !== 'false';
+
+  if (activeArea !== 'Armado') {
+    return (
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 text-center max-w-2xl mx-auto space-y-4 my-8">
+        <div className="p-4 bg-red-50 text-red-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto animate-pulse">
+          <FileSpreadsheet className="w-8 h-8" />
+        </div>
+        <h3 className="text-lg font-bold text-gray-900">Módulo {activeArea} Preparado</h3>
+        <p className="text-sm text-gray-500 leading-relaxed">
+          La estructura de almacenamiento para el inventario de <strong>{activeArea}</strong> ya está configurada e inicializada con éxito.
+        </p>
+        <p className="text-xs text-gray-400 bg-gray-50 p-3 rounded-2xl border border-gray-100">
+          En espera de recibir los archivos Excel correspondientes para construir la interfaz y las tablas a medida para esta sección.
+        </p>
+      </div>
+    );
+  }
 
   const [searchTerm, setSearchTerm] = useState<string>('');
 
@@ -251,23 +268,14 @@ export const InventoryTablesView: React.FC = () => {
     return items;
   };
 
-  // Extraer categorías únicas del inventario y crear secciones dinámicas
-  const uniqueCategories = Array.from(new Set(inventory.map(item => item.category)));
-  
-  const sections = uniqueCategories.map(cat => {
-    let type = 'default';
-    const catLower = cat.toLowerCase();
-    // Asignar el tipo de plantilla de columnas según la categoría
-    if (catLower.includes('caja')) type = 'cajas';
-    else if (catLower.includes('acevichado')) type = 'acevichado';
-    else if (catLower.includes('salsero') || catLower.includes('contenedor')) type = 'salseros';
-    
-    return {
-      id: cat,
-      label: cat.toUpperCase(),
-      type
-    };
-  });
+  // Obtener items por secciones
+  const sections = [
+    { id: 'cajas_1', label: 'PRIMER TURNO (Cajas x Maki)', type: 'cajas' },
+    { id: 'cajas_2', label: 'SEGUNDO TURNO (Cajas x Maki)', type: 'cajas' },
+    { id: 'salseros', label: 'SALSEROS (Contenedores)', type: 'salseros' },
+    { id: 'utensilios', label: 'UTENSILIOS DE ARMADO (Empaque)', type: 'utensilios' },
+    { id: 'gaseosas', label: 'GASEOSAS (Bebidas)', type: 'gaseosas' }
+  ];
 
   // Comprobar si al menos un producto coincide con la búsqueda
   const matchesCount = sections.reduce((acc, sec) => acc + getFilteredItems(sec.id).length, 0);

@@ -102,11 +102,18 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [history, setHistory] = useState<HistoryLog[]>([]);
+  const [activeArea, setActiveArea] = useState<string>('Armado');
   
+  useEffect(() => {
+    if (auth.user) {
+      const savedArea = localStorage.getItem('mr_sushi_active_area');
+      setActiveArea(savedArea || auth.user.area || 'Armado');
+    }
+  }, [auth.user]);
+
   // Sincronizar estado local con AuthContext
   const responsable = auth.user ? auth.user.fullName : '';
   const turno = auth.user ? (auth.user.turno || '') : '';
-  const activeArea = auth.user ? (auth.user.area || 'Armado') : 'Armado';
 
   const [activeInventoryUuid, setActiveInventoryUuid] = useState<string | null>(null);
   const [activeInventoryDate, setActiveInventoryDate] = useState<string | null>(null);
@@ -201,6 +208,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Cambiar de área de inventario
   const switchArea = async (newArea: string) => {
+    setActiveArea(newArea);
     localStorage.setItem('mr_sushi_active_area', newArea);
     const currentTurno = turno || 'Mañana';
     if (responsable) {
