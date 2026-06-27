@@ -328,6 +328,23 @@ export const getActiveInventory = async (req: Request, res: Response) => {
     // 3. Crear el nuevo inventario para hoy (primer inicio de sesión del día para este área)
     const baseItems = await db.all('SELECT * FROM inventory WHERE area = ? ORDER BY category ASC, id ASC', [area]);
 
+    if (baseItems.length === 0) {
+      // Si no hay productos configurados (ej. Barra y Cocina temporalmente), 
+      // devolvemos una sesión virtual sin guardarla en la base de datos para no ensuciar el historial.
+      return res.json({
+        uuid: 'virtual-empty-' + Date.now(),
+        fecha: hoy,
+        hora: horaStr,
+        encargado,
+        turno,
+        productos: [],
+        responsables: { [turno]: { encargado, ingreso: horaStr } },
+        observaciones: '',
+        estado: 'Abierto',
+        area
+      });
+    }
+
     // Buscar el último inventario registrado en general para heredar stocks (sea abierto o cerrado) para este área
     const lastClosed = await db.get(
       `SELECT productos FROM inventories_history 

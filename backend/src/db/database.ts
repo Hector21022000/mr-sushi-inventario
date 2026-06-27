@@ -256,9 +256,10 @@ export async function initDb() {
     { category: 'gaseosas', name: 'INKA ZERO 500 ML', measure: 'UND' }
   ];
 
-  // Limpiar inventarios de Barra y Cocina para evitar duplicaciones no deseadas
+  // Limpiar inventarios y sesiones de Barra y Cocina para evitar duplicaciones no deseadas o sesiones fantasma
   try {
     await db.exec(`DELETE FROM inventory WHERE area IN ('Barra', 'Cocina')`);
+    await db.exec(`DELETE FROM inventories_history WHERE area IN ('Barra', 'Cocina')`);
   } catch (e) {
     // Ignorar
   }
