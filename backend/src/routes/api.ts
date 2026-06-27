@@ -73,26 +73,43 @@ router.get('/test/seed-armado', async (req, res) => {
     const workbook = xlsx.readFile(excelPath);
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-    const rows = xlsx.utils.sheet_to_json<any>(sheet);
+    // Leer como array 2D
+    const rows = xlsx.utils.sheet_to_json<any[]>(sheet, { header: 1 });
 
     await db.run("UPDATE inventory SET is_active = 0 WHERE area = 'Armado'");
 
     let count = 0;
+    let currentCategory = 'cajas_1'; // Por defecto empezamos aquí
+    
     for (const row of rows) {
-      const category = row['Categoría'] || row['Categoria'] || row['category'] || 'General';
-      const name = row['Producto'] || row['Nombre'] || row['name'];
-      const measure = row['Medida'] || row['Unidad'] || 'UND';
+      if (!row || row.length === 0) continue;
+      
+      // Detectar cambios de sección
+      const strRow = row.join(' ').toUpperCase();
+      if (strRow.includes('CIERRE TOTAL 1ER TURNO')) { currentCategory = 'cajas_1'; continue; }
+      if (strRow.includes('CIERRE TOTAL 2DO TURNO')) { currentCategory = 'cajas_2'; continue; }
+      if (row[0] === 'PRODUCTOS ACEVICHADO') { currentCategory = 'acevichado'; continue; }
+      if (row[0] === 'SALSEROS') { currentCategory = 'salseros'; continue; }
+      if (row[0] === 'UTENCILIOS DE ARMADO' || row[0] === 'UTENSILIOS DE ARMADO') { currentCategory = 'utensilios'; continue; }
+      if (row[0] === 'GASEOSAS') { currentCategory = 'gaseosas'; continue; }
 
-      if (!name) continue;
+      // Ignorar cabeceras sueltas
+      if (row[0] === 'PRODUCTO' || row[0] === 'RESPONSABLE : _______________________________') continue;
 
-      await db.run(
-        `INSERT INTO inventory (category, name, measure, area, is_active) VALUES (?, ?, ?, 'Armado', 1)`,
-        [String(category).trim().toLowerCase(), String(name).trim(), String(measure).trim().toUpperCase()]
-      );
-      count++;
+      // Si tiene nombre de producto y medida, lo insertamos
+      const name = row[0];
+      const measure = row[1];
+      
+      if (currentCategory && typeof name === 'string' && name.trim() !== '') {
+        await db.run(
+          `INSERT INTO inventory (category, name, measure, area, is_active) VALUES (?, ?, ?, 'Armado', 1)`,
+          [currentCategory, name.trim(), (measure ? String(measure).trim().toUpperCase() : 'UND')]
+        );
+        count++;
+      }
     }
 
-    res.send(`<h1>Exito!</h1><p>Se insertaron ${count} productos en el área Armado a partir de tu archivo Excel original.</p><p>Puedes regresar a la aplicación y recargar la página.</p>`);
+    res.send(`<h1>Exito!</h1><p>Se extrajeron ${count} productos leyendo los grupos visuales (Primer Turno, Segundo Turno, Acevichado, Salseros, Utensilios, Gaseosas).</p><p>Puedes regresar a la aplicación y recargar la página.</p>`);
   } catch (error: any) {
     res.status(500).send(`<h1>Error</h1><p>${error.message}</p>`);
   }
