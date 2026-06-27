@@ -1,0 +1,7 @@
+// Qué hace el archivo: Configura VS Code para ignorar las reglas CSS desconocidas de Tailwind CSS v4, limpiando las advertencias del editor.
+// Fecha de última modificación: 2026-06-26
+// Nombre del autor: Antigravity
+
+{
+  "css.lint.unknownAtRules": "ignore"
+}
