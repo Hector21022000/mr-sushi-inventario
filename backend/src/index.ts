@@ -1,6 +1,6 @@
 /**
  * Qué hace el archivo: Punto de entrada del servidor backend de Express. Inicializa la base de datos y expone los servicios en el puerto 3001.
- * Fecha de última modificación: 2026-06-26
+ * Fecha de última modificación: 2026-06-27
  * Nombre del autor: Antigravity
  */
 
@@ -73,10 +73,13 @@ function scheduleMidnightAutoClose() {
     try {
       const db = await initDb(); // Obtener BD iniciada
       const dbInstance = await require('./db/database').getDb();
+      const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+      const hoyServidor = (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
       const result = await dbInstance.run(
         `UPDATE inventories_history 
          SET estado = 'Cerrado', updated_at = CURRENT_TIMESTAMP 
-         WHERE estado = 'Abierto'`
+         WHERE fecha < ? AND estado = 'Abierto'`,
+        [hoyServidor]
       );
       console.log(`[AutoClose] Cierre automático de medianoche ejecutado. Afectados: ${result.changes || 0}`);
     } catch (err) {

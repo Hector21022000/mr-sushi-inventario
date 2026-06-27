@@ -1,11 +1,20 @@
 /**
  * Qué hace el archivo: Contexto de React para gestionar el estado del inventario, responsable del turno, historial de auditoría y sincronización con el servidor.
- * Fecha de última modificación: 2026-06-26
+ * Fecha de última modificación: 2026-06-27
  * Nombre del autor: Antigravity
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+
+// Helper para obtener la fecha del dispositivo en formato YYYY-MM-DD
+const getDeviceDateString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 // URL base de la API del backend
 const API_URL = '/api';
@@ -57,6 +66,7 @@ interface InventoryContextType {
   responsable: string;
   turno: string;
   activeInventoryUuid: string | null;
+  activeInventoryDate: string | null;
   isClosedToday: boolean;
   responsables: Record<string, any> | null;
   loading: boolean;
@@ -94,6 +104,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return localStorage.getItem('mr_sushi_turno') || '';
   });
   const [activeInventoryUuid, setActiveInventoryUuid] = useState<string | null>(null);
+  const [activeInventoryDate, setActiveInventoryDate] = useState<string | null>(null);
   const [isClosedToday, setIsClosedToday] = useState<boolean>(false);
   const [responsables, setResponsables] = useState<Record<string, any> | null>(null);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
@@ -148,11 +159,13 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       localStorage.setItem('mr_sushi_turno', turnoSeleccionado);
 
       // Obtener o crear inventario activo para este turno/usuario
+      const deviceDate = getDeviceDateString();
       const activeRes = await axios.get(`${API_URL}/inventory/active`, {
-        params: { encargado, turno: turnoSeleccionado }
+        params: { encargado, turno: turnoSeleccionado, deviceDate }
       });
 
       setActiveInventoryUuid(activeRes.data.uuid);
+      setActiveInventoryDate(activeRes.data.fecha);
       setInventory(activeRes.data.productos);
       setIsClosedToday(activeRes.data.estado === 'Cerrado');
       setResponsables(activeRes.data.responsables || null);
@@ -174,6 +187,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setResponsableState('');
     setTurnoState('');
     setActiveInventoryUuid(null);
+    setActiveInventoryDate(null);
     setIsClosedToday(false);
     setResponsables(null);
     setInventory([]);
@@ -338,19 +352,41 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [activeInventoryUuid, hasChanges, inventory]);
 
-  // Chequeo de medianoche en el frontend (forzar cierre)
+  // Chequeo de cambio de día en tiempo real (medianoche rollover)
   useEffect(() => {
-    const checkMidnight = () => {
-      const now = new Date();
-      if (now.getHours() === 0 && now.getMinutes() === 0) {
-        console.log('[AutoClose] Es medianoche en el cliente, forzando cierre diario...');
-        closeInventory();
+    if (!activeInventoryUuid || !activeInventoryDate || !responsable || !turno) return;
+
+    const checkDateChange = async () => {
+      const currentDateStr = getDeviceDateString();
+      if (currentDateStr !== activeInventoryDate) {
+        console.log(`[Rollover] Cambio de día detectado: de ${activeInventoryDate} a ${currentDateStr}. Actualizando inventario...`);
+        try {
+          setLoading(true);
+          const activeRes = await axios.get(`${API_URL}/inventory/active`, {
+            params: { encargado: responsable, turno, deviceDate: currentDateStr }
+          });
+
+          setActiveInventoryUuid(activeRes.data.uuid);
+          setActiveInventoryDate(activeRes.data.fecha);
+          setInventory(activeRes.data.productos);
+          setIsClosedToday(activeRes.data.estado === 'Cerrado');
+          setResponsables(activeRes.data.responsables || null);
+
+          // Cargar historial
+          const histRes = await axios.get<HistoryLog[]>(`${API_URL}/history`);
+          setHistory(histRes.data);
+        } catch (err) {
+          console.error('Error al cambiar de inventario por cambio de día:', err);
+          setError('Error al actualizar el inventario automático por cambio de día.');
+        } finally {
+          setLoading(false);
+        }
       }
     };
 
-    const interval = setInterval(checkMidnight, 60000); // Comprobar cada minuto
+    const interval = setInterval(checkDateChange, 5000); // Comprobar cada 5 segundos
     return () => clearInterval(interval);
-  }, [activeInventoryUuid]);
+  }, [activeInventoryUuid, activeInventoryDate, responsable, turno]);
 
   // Calcular estadísticas dinámicas para el dashboard
   const stats: DashboardStats = React.useMemo(() => {
@@ -414,6 +450,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         responsable,
         turno,
         activeInventoryUuid,
+        activeInventoryDate,
         isClosedToday,
         responsables,
         loading,

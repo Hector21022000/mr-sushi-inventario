@@ -1,6 +1,6 @@
 /**
  * Qué hace el archivo: Componente principal de la aplicación. Gestiona la navegación (Dashboard, Inventario, Historial, Reportes), la cabecera y el acceso de sesión condicional (Login).
- * Fecha de última modificación: 2026-06-26
+ * Fecha de última modificación: 2026-06-27
  * Nombre del autor: Antigravity
  */
 
@@ -13,6 +13,7 @@ import { AuditHistoryView } from './components/History/AuditHistoryView';
 import { HistoryCalendarView } from './components/History/HistoryCalendarView';
 import { LoginView } from './components/Auth/LoginView';
 import { CriticalSidebarPanel } from './components/Sidebar/CriticalSidebarPanel';
+import { RealTimeClockPanel } from './components/ui/RealTimeClockPanel';
 import { 
   LayoutDashboard, 
   FileSpreadsheet, 
@@ -232,6 +233,9 @@ const App: React.FC = () => {
               <span className="text-gray-500 font-medium">Encargado:</span>
               <strong className="text-gray-800">{responsable} ({turno})</strong>
             </div>
+
+            {/* Panel de Fecha y Hora en tiempo real */}
+            <RealTimeClockPanel />
 
             {/* Carrito / Compras Críticas Badge */}
             <button

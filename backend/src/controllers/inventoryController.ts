@@ -1,6 +1,6 @@
 /**
  * Qué hace el archivo: Controlador de inventario. Gestiona la obtención, cálculo reactivo y actualización de ítems del inventario, registrando cambios en el historial.
- * Fecha de última modificación: 2026-06-26
+ * Fecha de última modificación: 2026-06-27
  * Nombre del autor: Antigravity
  */
 
@@ -216,6 +216,7 @@ export const saveSession = async (req: Request, res: Response) => {
 export const getActiveInventory = async (req: Request, res: Response) => {
   const encargado = req.query.encargado as string;
   const turno = req.query.turno as string;
+  const deviceDate = req.query.deviceDate as string;
 
   if (!encargado || !turno) {
     return res.status(400).json({ error: 'Encargado y turno son requeridos' });
@@ -225,10 +226,18 @@ export const getActiveInventory = async (req: Request, res: Response) => {
     const db = await getDb();
     // Obtener la fecha local YYYY-MM-DD
     const tzoffset = (new Date()).getTimezoneOffset() * 60000;
-    const hoy = (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
+    const hoy = deviceDate || (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
 
     const ahora = new Date();
     const horaStr = ahora.toTimeString().split(' ')[0];
+
+    // Cerrar automáticamente cualquier inventario anterior que haya quedado abierto
+    await db.run(
+      `UPDATE inventories_history 
+       SET estado = 'Cerrado', updated_at = CURRENT_TIMESTAMP 
+       WHERE fecha < ? AND estado = 'Abierto'`,
+      [hoy]
+    );
 
     // Función helper para sincronizar el snapshot JSON de productos con la tabla clásica 'inventory'
     const syncTableWithSnapshot = async (products: any[]) => {
@@ -316,11 +325,10 @@ export const getActiveInventory = async (req: Request, res: Response) => {
     // 3. Crear el nuevo inventario para hoy (primer inicio de sesión del día)
     const baseItems = await db.all('SELECT * FROM inventory ORDER BY category ASC, id ASC');
 
-    // Buscar el último inventario cerrado en general para heredar stocks
+    // Buscar el último inventario registrado en general para heredar stocks (sea abierto o cerrado)
     const lastClosed = await db.get(
       `SELECT productos FROM inventories_history 
-       WHERE estado = 'Cerrado' 
-       ORDER BY fecha DESC, hora DESC LIMIT 1`
+       ORDER BY fecha DESC, hora DESC, id DESC LIMIT 1`
     );
 
     let stockHeredado: Record<string, number> = {};
