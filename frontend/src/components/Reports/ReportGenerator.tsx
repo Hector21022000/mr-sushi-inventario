@@ -346,62 +346,63 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
         </div>
       </div>
 
-      {/* PLANTILLA DE INFORME EJECUTIVO OCULTO (Optimizado para captura A4 Landscape w-1280px) */}
-      <div className="absolute left-[-9999px] top-[-9999px]">
+      {/* PLANTILLA DE INFORME EJECUTIVO OCULTO (Optimizado para captura A4 Landscape w-1280px con estilos inline robustos) */}
+      <div style={{ position: 'fixed', left: '9999px', top: '0px', zIndex: -100, opacity: 1 }}>
         <div
           ref={reportRef}
-          className="w-[1280px] bg-white p-6 flex flex-col justify-between font-sans border border-gray-200 space-y-4"
+          className="bg-white p-6 flex flex-col justify-between font-sans"
+          style={{ width: '1280px', minHeight: '800px', boxSizing: 'border-box', color: '#1F2937' }}
         >
           {/* Cabecera Corporativa */}
-          <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+          <div className="flex justify-between items-center pb-3" style={{ borderBottom: '2px solid #E5E7EB' }}>
             {/* Izquierda: Logo y Texto Marca */}
             <div className="flex items-center gap-4">
               <img src={logoImg} alt="MR-SUSHI Logo" className="h-10 w-10 object-contain rounded-lg shrink-0" />
               <div>
-                <h1 className="text-lg font-extrabold text-[#0B1B3D] tracking-tight">MR-SUSHI</h1>
-                <p className="text-[8px] font-bold text-red-600 uppercase tracking-widest leading-none">Sistema Inteligente de Control de Inventario</p>
+                <h1 className="text-lg font-black tracking-tight" style={{ color: '#0B1B3D', margin: 0 }}>MR-SUSHI</h1>
+                <p className="text-[8px] font-bold text-red-600 uppercase tracking-widest leading-none" style={{ margin: 0 }}>Sistema Inteligente de Control de Inventario</p>
               </div>
             </div>
 
             {/* Centro: Título */}
             <div className="text-center">
-              <h2 className="text-xl font-black text-gray-900 tracking-wider uppercase">REPORTE DE INVENTARIO DIARIO</h2>
+              <h2 className="text-xl font-black tracking-wider uppercase" style={{ color: '#111827', margin: 0 }}>REPORTE DE INVENTARIO DIARIO</h2>
             </div>
 
             {/* Derecha: Número de Reporte */}
             <div>
-              <div className="border border-gray-300 bg-gray-50/50 px-3 py-1 rounded-lg text-xs font-bold text-gray-700 tracking-wider">
+              <div className="px-3 py-1 rounded-lg text-xs font-bold text-gray-700 tracking-wider" style={{ border: '1px solid #D1D5DB', backgroundColor: '#F9FAFB' }}>
                 REPORTE N°: {reportMeta.fecha.replace(/\//g, '-')}-001
               </div>
             </div>
           </div>
 
           {/* Barra de Metadatos (Diseño continuo de celdas Excel) */}
-          <div className="grid grid-cols-4 border border-gray-300 rounded-lg overflow-hidden divide-x divide-gray-300 text-xs font-semibold bg-gray-50/50">
-            <div className="py-2 px-4 flex items-center gap-2 text-gray-700">
-              <span className="text-gray-400">📅</span>
+          <div className="grid grid-cols-4 rounded-lg text-xs font-semibold mt-3" style={{ border: '1px solid #D1D5DB', backgroundColor: '#F9FAFB', overflow: 'hidden' }}>
+            <div className="py-2 px-4 flex items-center gap-2 text-gray-700" style={{ borderRight: '1px solid #D1D5DB' }}>
+              <span>📅</span>
               <span>Fecha:</span>
               <strong className="text-gray-900 font-bold ml-1">{reportMeta.fecha}</strong>
             </div>
-            <div className="py-2 px-4 flex items-center gap-2 text-gray-700">
-              <span className="text-gray-400">⏰</span>
+            <div className="py-2 px-4 flex items-center gap-2 text-gray-700" style={{ borderRight: '1px solid #D1D5DB' }}>
+              <span>⏰</span>
               <span>Hora:</span>
               <strong className="text-gray-900 font-bold ml-1">{reportMeta.hora}</strong>
             </div>
-            <div className="py-2 px-4 flex items-center gap-2 text-gray-700">
-              <span className="text-gray-400">👤</span>
+            <div className="py-2 px-4 flex items-center gap-2 text-gray-700" style={{ borderRight: '1px solid #D1D5DB' }}>
+              <span>👤</span>
               <span>Responsable:</span>
               <strong className="text-gray-900 font-bold ml-1 truncate">{reportMeta.encargado}</strong>
             </div>
             <div className="py-2 px-4 flex items-center gap-2 text-gray-700">
-              <span className="text-gray-400">👥</span>
+              <span>👥</span>
               <span>Turno:</span>
               <strong className="text-gray-900 font-bold ml-1">{reportMeta.turno}</strong>
             </div>
           </div>
 
           {/* Listado de Tablas Consecutivas en Estructura Excel */}
-          <div className="space-y-4 flex-grow">
+          <div className="space-y-4 flex-grow mt-4">
             {[
               { id: 'cajas_1', label: '1. CAJAS (1ER TURNO)', type: 'cajas' },
               { id: 'cajas_2', label: '2. CAJAS (2DO TURNO)', type: 'cajas' },
@@ -410,48 +411,44 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
               { id: 'gaseosas', label: '5. GASEOSAS', type: 'gaseosas' }
             ].map((section) => {
               // Filtrar productos correspondientes a la sección
-              const sectionItems = activeData.filter(item => {
-                if (section.id.startsWith('cajas')) return item.category === section.id;
-                return item.category === section.id;
-              });
+              const sectionItems = activeData.filter(item => item.category === section.id);
 
               if (sectionItems.length === 0) return null;
 
               const isCaja = section.type === 'cajas';
-              const isAcevichado = section.type === 'acevichado';
 
               return (
                 <div key={section.id} className="space-y-1">
                   {/* Título de la Sección */}
-                  <h3 className="text-xs font-black text-[#0B1B3D] uppercase tracking-wide">
+                  <h3 className="text-xs font-black uppercase tracking-wide" style={{ color: '#0B1B3D', margin: '4px 0' }}>
                     {section.label}
                   </h3>
 
                   {/* Cuadrícula de Tabla Estilo Excel */}
-                  <table className="w-full text-left border-collapse border border-gray-300 text-xs font-medium">
+                  <table className="w-full text-xs font-medium" style={{ borderCollapse: 'collapse', border: '1px solid #D1D5DB' }}>
                     <thead>
-                      <tr className="bg-[#0B1B3D] text-white uppercase font-bold text-[10px]">
-                        <th className="p-1.5 border border-gray-300 pl-3">Producto</th>
-                        <th className="p-1.5 border border-gray-300 text-center w-16">Medida</th>
+                      <tr style={{ backgroundColor: '#0B1B3D', color: '#FFFFFF' }}>
+                        <th style={{ border: '1px solid #D1D5DB', padding: '6px', textAlign: 'left', fontWeight: 'bold' }}>Producto</th>
+                        <th style={{ border: '1px solid #D1D5DB', padding: '6px', textAlign: 'center', width: '70px', fontWeight: 'bold' }}>Medida</th>
                         {isCaja ? (
                           <>
-                            <th className="p-1.5 border border-gray-300 text-center w-36">S. Inicial (Desarmadas)</th>
-                            <th className="p-1.5 border border-gray-300 text-center w-32">Ingreso (Armadas)</th>
-                            <th className="p-1.5 border border-gray-300 text-center w-20">Total</th>
-                            <th className="p-1.5 border border-gray-300 text-center w-24">Producción</th>
-                            <th className="p-1.5 border border-gray-300 text-center w-20">Restante</th>
-                            <th className="p-1.5 border border-gray-300 text-center w-20">S. Final</th>
+                            <th style={{ border: '1px solid #D1D5DB', padding: '6px', textAlign: 'center', width: '150px', fontWeight: 'bold' }}>S. Inicial (Desarmadas)</th>
+                            <th style={{ border: '1px solid #D1D5DB', padding: '6px', textAlign: 'center', width: '130px', fontWeight: 'bold' }}>Ingreso (Armadas)</th>
+                            <th style={{ border: '1px solid #D1D5DB', padding: '6px', textAlign: 'center', width: '90px', fontWeight: 'bold' }}>Total</th>
+                            <th style={{ border: '1px solid #D1D5DB', padding: '6px', textAlign: 'center', width: '110px', fontWeight: 'bold' }}>Producción</th>
+                            <th style={{ border: '1px solid #D1D5DB', padding: '6px', textAlign: 'center', width: '90px', fontWeight: 'bold' }}>Restante</th>
+                            <th style={{ border: '1px solid #D1D5DB', padding: '6px', textAlign: 'center', width: '90px', fontWeight: 'bold' }}>S. Final</th>
                           </>
                         ) : (
                           <>
-                            <th className="p-1.5 border border-gray-300 text-center w-36">S. Inicial</th>
-                            <th className="p-1.5 border border-gray-300 text-center w-32">Ingreso</th>
-                            <th className="p-1.5 border border-gray-300 text-center w-20">Total</th>
-                            <th className="p-1.5 border border-gray-300 text-center w-24">Consumo</th>
-                            <th className="p-1.5 border border-gray-300 text-center w-20">S. Final</th>
+                            <th style={{ border: '1px solid #D1D5DB', padding: '6px', textAlign: 'center', width: '150px', fontWeight: 'bold' }}>S. Inicial</th>
+                            <th style={{ border: '1px solid #D1D5DB', padding: '6px', textAlign: 'center', width: '130px', fontWeight: 'bold' }}>Ingreso</th>
+                            <th style={{ border: '1px solid #D1D5DB', padding: '6px', textAlign: 'center', width: '90px', fontWeight: 'bold' }}>Total</th>
+                            <th style={{ border: '1px solid #D1D5DB', padding: '6px', textAlign: 'center', width: '110px', fontWeight: 'bold' }}>Consumo</th>
+                            <th style={{ border: '1px solid #D1D5DB', padding: '6px', textAlign: 'center', width: '90px', fontWeight: 'bold' }}>S. Final</th>
                           </>
                         )}
-                        <th className="p-1.5 border border-gray-300 text-center w-72">Requerimiento</th>
+                        <th style={{ border: '1px solid #D1D5DB', padding: '6px', textAlign: 'center', width: '280px', fontWeight: 'bold' }}>Requerimiento</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white">
@@ -459,44 +456,44 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                         // Determinar los estilos de requerimiento
                         const reqVal = item.requerimiento || 'No requiere';
                         const reqLower = reqVal.toLowerCase();
-                        let reqClass = 'bg-[#2E7D32] text-white';
+                        
+                        let reqBg = '#2E7D32';
+                        let reqColor = '#FFFFFF';
                         let reqText = 'No requiere reposición';
 
                         if (reqLower.includes('urgente') || reqLower.includes('crítico') || reqLower.includes('agotado') || item.total === 0) {
-                          reqClass = 'bg-[#C62828] text-white';
+                          reqBg = '#C62828';
+                          reqColor = '#FFFFFF';
                           reqText = 'Producto agotado. Requiere reposición inmediata';
                         } else if (reqLower.includes('comprar') || reqLower.includes('requiere cajas') || reqLower.includes('reposición') || reqLower.includes('bajo')) {
-                          reqClass = 'bg-[#FBC02D] text-gray-900';
+                          reqBg = '#FBC02D';
+                          reqColor = '#1F2937';
                           reqText = 'Requiere reposición (stock bajo)';
                         }
 
                         return (
-                          <tr key={idx} className="hover:bg-gray-50/50">
-                            <td className="p-1 border border-gray-200 pl-3 font-bold text-gray-900">{item.name}</td>
-                            <td className="p-1 border border-gray-200 text-center text-gray-500 font-semibold uppercase">{item.measure}</td>
+                          <tr key={idx} style={{ borderBottom: '1px solid #E5E7EB' }}>
+                            <td style={{ border: '1px solid #D1D5DB', padding: '5px 8px', textAlign: 'left', fontWeight: 'bold', color: '#111827' }}>{item.name}</td>
+                            <td style={{ border: '1px solid #D1D5DB', padding: '5px', textAlign: 'center', color: '#6B7280', fontWeight: 'bold', textTransform: 'uppercase' }}>{item.measure}</td>
                             {isCaja ? (
                               <>
-                                <td className="p-1 border border-gray-200 text-center text-gray-800 font-medium">{item.cajas_desarmadas}</td>
-                                <td className="p-1 border border-gray-200 text-center text-gray-800 font-medium">{item.cajas_armadas}</td>
-                                <td className="p-1 border border-gray-200 text-center text-gray-900 font-extrabold">{item.total}</td>
-                                <td className="p-1 border border-gray-200 text-center text-gray-800 font-medium">{item.consumido}</td>
-                                <td className="p-1 border border-gray-200 text-center text-gray-800 font-medium">{item.cierre_turno}</td>
-                                <td className="p-1 border border-gray-200 text-center text-gray-900 font-bold">{item.cierre_turno}</td>
+                                <td style={{ border: '1px solid #D1D5DB', padding: '5px', textAlign: 'center', color: '#374151' }}>{item.cajas_desarmadas}</td>
+                                <td style={{ border: '1px solid #D1D5DB', padding: '5px', textAlign: 'center', color: '#374151' }}>{item.cajas_armadas}</td>
+                                <td style={{ border: '1px solid #D1D5DB', padding: '5px', textAlign: 'center', color: '#111827', fontWeight: '800' }}>{item.total}</td>
+                                <td style={{ border: '1px solid #D1D5DB', padding: '5px', textAlign: 'center', color: '#374151' }}>{item.consumido}</td>
+                                <td style={{ border: '1px solid #D1D5DB', padding: '5px', textAlign: 'center', color: '#374151' }}>{item.cierre_turno}</td>
+                                <td style={{ border: '1px solid #D1D5DB', padding: '5px', textAlign: 'center', color: '#111827', fontWeight: 'bold' }}>{item.cierre_turno}</td>
                               </>
                             ) : (
                               <>
-                                <td className="p-1 border border-gray-200 text-center text-gray-800 font-medium">{item.s_inicial}</td>
-                                <td className="p-1 border border-gray-200 text-center text-gray-800 font-medium">{item.ingreso}</td>
-                                <td className="p-1 border border-gray-200 text-center text-gray-900 font-extrabold">{item.total}</td>
-                                <td className="p-1 border border-gray-200 text-center text-gray-800 font-medium">
-                                  {isAcevichado ? item.produccion : item.consumido}
-                                </td>
-                                <td className="p-1 border border-gray-200 text-center text-gray-900 font-bold">
-                                  {isAcevichado ? item.restante : item.s_final}
-                                </td>
+                                <td style={{ border: '1px solid #D1D5DB', padding: '5px', textAlign: 'center', color: '#374151' }}>{item.s_inicial}</td>
+                                <td style={{ border: '1px solid #D1D5DB', padding: '5px', textAlign: 'center', color: '#374151' }}>{item.ingreso}</td>
+                                <td style={{ border: '1px solid #D1D5DB', padding: '5px', textAlign: 'center', color: '#111827', fontWeight: '800' }}>{item.total}</td>
+                                <td style={{ border: '1px solid #D1D5DB', padding: '5px', textAlign: 'center', color: '#374151' }}>{item.consumido}</td>
+                                <td style={{ border: '1px solid #D1D5DB', padding: '5px', textAlign: 'center', color: '#111827', fontWeight: 'bold' }}>{item.s_final}</td>
                               </>
                             )}
-                            <td className={`${reqClass} border border-gray-200 text-center font-bold text-[9px] uppercase tracking-wider py-1 px-2`}>
+                            <td style={{ border: '1px solid #D1D5DB', padding: '5px', textAlign: 'center', fontWeight: 'bold', fontSize: '9px', letterSpacing: '0.05em', textTransform: 'uppercase', backgroundColor: reqBg, color: reqColor }}>
                               {reqText}
                             </td>
                           </tr>
@@ -510,7 +507,7 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
           </div>
 
           {/* Pie de Página del Reporte Corto */}
-          <div className="border-t border-gray-200 pt-3 flex justify-between items-center text-[9px] text-gray-400 font-semibold uppercase tracking-wider">
+          <div className="pt-3 flex justify-between items-center text-[9px] text-gray-400 font-semibold uppercase tracking-wider" style={{ borderTop: '1px solid #D1D5DB', marginTop: '16px' }}>
             <div>
               <span>© {new Date().getFullYear()} MR-SUSHI S.A.C. Todos los derechos reservados.</span>
             </div>
