@@ -61,7 +61,7 @@ class PostgresDatabase implements AppDatabase {
     // Adaptar tipos y sintaxis específicos de SQLite a PostgreSQL
     let pgSql = sql
       .replace(/INTEGER PRIMARY KEY AUTOINCREMENT/gi, 'SERIAL PRIMARY KEY')
-      .replace(/DATETIME DEFAULT CURRENT_TIMESTAMP/gi, 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
+      .replace(/DATETIME/gi, 'TIMESTAMP')
       .replace(/REAL/gi, 'DOUBLE PRECISION');
     
     await this.pool.query(pgSql);
