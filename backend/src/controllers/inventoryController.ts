@@ -230,6 +230,36 @@ export const getActiveInventory = async (req: Request, res: Response) => {
     const ahora = new Date();
     const horaStr = ahora.toTimeString().split(' ')[0];
 
+    // Función helper para sincronizar el snapshot JSON de productos con la tabla clásica 'inventory'
+    const syncTableWithSnapshot = async (products: any[]) => {
+      for (const p of products) {
+        await db.run(
+          `UPDATE inventory 
+           SET cajas_desarmadas = ?, cajas_armadas = ?, s_inicial = ?, ingreso = ?,
+               total = ?, consumido = ?, cierre_turno = ?, merma = ?, s_final = ?,
+               restante = ?, produccion = ?, requerimiento = ?, comentarios = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE category = ? AND name = ?`,
+          [
+            p.cajas_desarmadas || 0,
+            p.cajas_armadas || 0,
+            p.s_inicial || 0,
+            p.ingreso || 0,
+            p.total || 0,
+            p.consumido || 0,
+            p.cierre_turno || 0,
+            p.merma || 0,
+            p.s_final || 0,
+            p.restante || 0,
+            p.produccion || 0,
+            p.requerimiento || '',
+            p.comentarios || '',
+            p.category,
+            p.name
+          ]
+        );
+      }
+    };
+
     // 1. Buscar inventario abierto para hoy (independientemente del turno/encargado)
     let active = await db.get(
       `SELECT * FROM inventories_history 
@@ -255,6 +285,10 @@ export const getActiveInventory = async (req: Request, res: Response) => {
 
       active.productos = JSON.parse(active.productos);
       active.responsables = respObj;
+
+      // Sincronizar la tabla clásica de la base de datos
+      await syncTableWithSnapshot(active.productos);
+
       return res.json(active);
     }
 
@@ -272,6 +306,10 @@ export const getActiveInventory = async (req: Request, res: Response) => {
       } catch (e) {
         closedToday.responsables = {};
       }
+
+      // Sincronizar la tabla clásica de la base de datos
+      await syncTableWithSnapshot(closedToday.productos);
+
       return res.json(closedToday);
     }
 
@@ -336,6 +374,9 @@ export const getActiveInventory = async (req: Request, res: Response) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, 'Abierto')`,
       [newUuid, hoy, horaStr, encargado, turno, JSON.stringify(newProducts), JSON.stringify(respObj)]
     );
+
+    // Sincronizar la tabla clásica de la base de datos
+    await syncTableWithSnapshot(newProducts);
 
     const created = {
       uuid: newUuid,
