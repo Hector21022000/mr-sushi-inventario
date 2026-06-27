@@ -40,6 +40,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     if (user) {
       refreshSettings();
+    } else {
+      setLoading(false);
+      setSettings({});
     }
   }, [user]);
 
