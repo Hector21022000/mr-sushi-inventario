@@ -5,17 +5,38 @@
  */
 
 import { Router } from 'express';
-import { getInventory, updateInventoryItem } from '../controllers/inventoryController';
+import { 
+  getInventory, 
+  updateInventoryItem,
+  saveSession,
+  getActiveInventory,
+  updateActiveInventory,
+  closeActiveInventory,
+  getInventoryHistory,
+  getInventoryHistoryDetail
+} from '../controllers/inventoryController';
 import { getHistory, clearHistory } from '../controllers/historyController';
 import { saveReport } from '../controllers/reportController';
 
 const router = Router();
 
-// Rutas de Inventario
+// Rutas de Inventario (Heredadas)
 router.get('/inventory', getInventory);
 router.put('/inventory/:id', updateInventoryItem);
 
-// Rutas de Historial
+// Rutas de Sesión y Login
+router.post('/sessions', saveSession);
+
+// Rutas de Inventario Activo (Snapshots & Autoguardado)
+router.get('/inventory/active', getActiveInventory);
+router.put('/inventory/active/:uuid', updateActiveInventory);
+router.post('/inventory/active/:uuid/close', closeActiveInventory);
+
+// Rutas de Historial de Snapshots (Calendario)
+router.get('/inventory/history', getInventoryHistory);
+router.get('/inventory/history/:uuid', getInventoryHistoryDetail);
+
+// Rutas de Historial (Auditoría)
 router.get('/history', getHistory);
 router.delete('/history', clearHistory);
 

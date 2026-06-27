@@ -1,5 +1,5 @@
 /**
- * Qué hace el archivo: Componente principal de la aplicación. Gestiona la navegación (Dashboard, Inventario, Historial, Reportes), la cabecera, la edición del responsable de turno y la apertura del panel de compras críticas.
+ * Qué hace el archivo: Componente principal de la aplicación. Gestiona la navegación (Dashboard, Inventario, Historial, Reportes), la cabecera y el acceso de sesión condicional (Login).
  * Fecha de última modificación: 2026-06-26
  * Nombre del autor: Antigravity
  */
@@ -10,6 +10,8 @@ import { DashboardView } from './components/Dashboard/DashboardView';
 import { InventoryTablesView } from './components/Inventory/InventoryTablesView';
 import { RequiredItemsView } from './components/Inventory/RequiredItemsView';
 import { AuditHistoryView } from './components/History/AuditHistoryView';
+import { HistoryCalendarView } from './components/History/HistoryCalendarView';
+import { LoginView } from './components/Auth/LoginView';
 import { CriticalSidebarPanel } from './components/Sidebar/CriticalSidebarPanel';
 import { 
   LayoutDashboard, 
@@ -19,38 +21,40 @@ import {
   User, 
   Menu, 
   X,
-  AlertTriangle
+  AlertTriangle,
+  Calendar,
+  LogOut,
+  CheckCircle2
 } from 'lucide-react';
 import logoImg from './assets/logo.png';
 
 const App: React.FC = () => {
-  const { responsable, setResponsable, criticalItems, error } = useInventory();
+  const { 
+    responsable, 
+    turno, 
+    activeInventoryUuid, 
+    closeInventory, 
+    logoutUser, 
+    criticalItems, 
+    error 
+  } = useInventory();
+
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [criticalPanelOpen, setCriticalPanelOpen] = useState<boolean>(false);
-  const [respInput, setRespInput] = useState<string>(responsable);
+
+  // Si no se ha iniciado sesión, bloquear la aplicación con la pantalla de bienvenida
+  if (!activeInventoryUuid) {
+    return <LoginView />;
+  }
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'inventory', label: 'Inventario General', icon: FileSpreadsheet },
     { id: 'required_items', label: 'Lista de Compras', icon: ShoppingCart },
-    { id: 'history', label: 'Historial / Auditoría', icon: History }
+    { id: 'history_calendar', label: 'Historial de Inventarios', icon: Calendar },
+    { id: 'history', label: 'Auditoría de Cambios', icon: History }
   ];
-
-  const handleRespBlur = () => {
-    const trimmed = respInput.trim();
-    if (trimmed) {
-      setResponsable(trimmed);
-    } else {
-      setRespInput(responsable);
-    }
-  };
-
-  const handleRespKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      (e.target as HTMLInputElement).blur();
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex font-sans antialiased text-gray-800">
@@ -89,21 +93,32 @@ const App: React.FC = () => {
           </nav>
         </div>
 
-        {/* Footer Sidebar / Responsable */}
+        {/* Footer Sidebar / Responsable y Controles de Cierre */}
         <div className="border-t border-gray-100 pt-4 space-y-3">
-          <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 space-y-1.5">
-            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Responsable Activo</span>
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-gray-400 shrink-0" />
-              <input
-                type="text"
-                value={respInput}
-                onChange={(e) => setRespInput(e.target.value)}
-                onBlur={handleRespBlur}
-                onKeyDown={handleRespKeyDown}
-                className="bg-transparent text-xs font-semibold text-gray-800 focus:outline-none w-full border-b border-transparent hover:border-gray-200 focus:border-red-500 transition-colors"
-                placeholder="Nombre del responsable"
-              />
+          <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 space-y-2">
+            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Sesión Activa</span>
+            <div className="text-xs font-bold text-gray-800 flex items-center gap-2">
+              <User className="w-4 h-4 text-red-500 shrink-0" />
+              <span className="truncate">{responsable}</span>
+            </div>
+            <div className="text-[10px] font-semibold text-gray-500 pl-6">
+              Turno: {turno}
+            </div>
+            <div className="pt-2 flex flex-col gap-1.5">
+              <button
+                onClick={closeInventory}
+                className="w-full py-2 px-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Cerrar Inventario
+              </button>
+              <button
+                onClick={logoutUser}
+                className="w-full py-1.5 px-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                Salir (Logout)
+              </button>
             </div>
           </div>
           <p className="text-[10px] text-gray-400 text-center font-medium">© {new Date().getFullYear()} MR·SUSHI S.A.C.</p>
@@ -113,10 +128,8 @@ const App: React.FC = () => {
       {/* SIDEBAR MÓVIL (MENU HAMBURGUESA SLIDEOVER) */}
       {sidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
-          {/* Fondo obscuro */}
           <div className="fixed inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setSidebarOpen(false)} />
           
-          {/* Contenedor del menú */}
           <div className="relative flex flex-col w-64 max-w-xs bg-white p-6 justify-between h-full shadow-2xl">
             <button 
               onClick={() => setSidebarOpen(false)}
@@ -156,16 +169,25 @@ const App: React.FC = () => {
               </nav>
             </div>
             <div className="border-t border-gray-100 pt-4 space-y-2">
-              <div className="bg-gray-50 p-3 rounded-xl">
-                <span className="text-[9px] font-bold text-gray-400 uppercase block">Responsable</span>
-                <input
-                  type="text"
-                  value={respInput}
-                  onChange={(e) => setRespInput(e.target.value)}
-                  onBlur={handleRespBlur}
-                  onKeyDown={handleRespKeyDown}
-                  className="bg-transparent text-xs font-semibold text-gray-800 focus:outline-none w-full border-b border-transparent focus:border-red-500"
-                />
+              <div className="bg-gray-50 p-3 rounded-xl space-y-2">
+                <span className="text-[9px] font-bold text-gray-400 uppercase block">Sesión Activa</span>
+                <div className="text-xs font-bold text-gray-800 truncate">{responsable} ({turno})</div>
+                <div className="flex flex-col gap-1 pt-1">
+                  <button
+                    onClick={closeInventory}
+                    className="w-full py-1.5 px-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[9px] font-bold uppercase flex items-center justify-center gap-1"
+                  >
+                    <CheckCircle2 className="w-3 h-3" />
+                    Cerrar Inventario
+                  </button>
+                  <button
+                    onClick={logoutUser}
+                    className="w-full py-1 px-2 bg-gray-100 text-gray-600 rounded-lg text-[9px] font-bold uppercase flex items-center justify-center gap-1"
+                  >
+                    <LogOut className="w-3 h-3" />
+                    Salir
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -188,6 +210,7 @@ const App: React.FC = () => {
               {activeTab === 'dashboard' && 'Dashboard General'}
               {activeTab === 'inventory' && 'Inventario General'}
               {activeTab === 'required_items' && 'Productos Requeridos (Compras)'}
+              {activeTab === 'history_calendar' && 'Historial de Inventarios'}
               {activeTab === 'history' && 'Auditoría de Cambios'}
             </h2>
             {/* Logo en Móviles en la Cabecera */}
@@ -201,8 +224,8 @@ const App: React.FC = () => {
             {/* Responsable Rápido en Cabecera (Desktop) */}
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-xl border border-gray-100 text-xs">
               <User className="w-3.5 h-3.5 text-gray-400" />
-              <span className="text-gray-500 font-medium">Turno de:</span>
-              <strong className="text-gray-800">{responsable}</strong>
+              <span className="text-gray-500 font-medium">Encargado:</span>
+              <strong className="text-gray-800">{responsable} ({turno})</strong>
             </div>
 
             {/* Carrito / Compras Críticas Badge */}
@@ -214,7 +237,6 @@ const App: React.FC = () => {
               <ShoppingCart className="w-5 h-5" />
               {criticalItems.length > 0 && (
                 <>
-                  {/* Círculo animado */}
                   <span className="absolute -top-1 -right-1 flex h-5 w-5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-5 w-5 bg-red-600 text-[10px] font-extrabold text-white items-center justify-center">
@@ -242,6 +264,7 @@ const App: React.FC = () => {
           {activeTab === 'dashboard' && <DashboardView />}
           {activeTab === 'inventory' && <InventoryTablesView />}
           {activeTab === 'required_items' && <RequiredItemsView />}
+          {activeTab === 'history_calendar' && <HistoryCalendarView />}
           {activeTab === 'history' && <AuditHistoryView />}
         </main>
       </div>

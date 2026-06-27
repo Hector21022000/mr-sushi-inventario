@@ -6,6 +6,7 @@
 
 import { Request, Response } from 'express';
 import { getDb, calculateRequerimiento } from '../db/database';
+import crypto from 'crypto';
 
 export const getInventory = async (req: Request, res: Response) => {
   try {
@@ -149,6 +150,252 @@ export const updateInventoryItem = async (req: Request, res: Response) => {
     // Retornar el ítem actualizado
     const updatedItem = await db.get('SELECT * FROM inventory WHERE id = ?', [id]);
     res.json(updatedItem);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// --- NUEVOS CONTROLADORES DE HISTORIAL Y SESIONES ---
+
+export const saveSession = async (req: Request, res: Response) => {
+  const { encargado, turno } = req.body;
+  if (!encargado || !turno) {
+    return res.status(400).json({ error: 'Encargado y turno son requeridos' });
+  }
+  try {
+    const db = await getDb();
+    await db.run(
+      'INSERT INTO user_sessions (encargado, turno) VALUES (?, ?)',
+      [encargado, turno]
+    );
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getActiveInventory = async (req: Request, res: Response) => {
+  const encargado = req.query.encargado as string;
+  const turno = req.query.turno as string;
+
+  if (!encargado || !turno) {
+    return res.status(400).json({ error: 'Encargado y turno son requeridos' });
+  }
+
+  try {
+    const db = await getDb();
+    const hoy = new Date().toISOString().split('T')[0];
+
+    // 1. Buscar inventario abierto para hoy, este encargado y turno
+    let active = await db.get(
+      `SELECT * FROM inventories_history 
+       WHERE encargado = ? AND turno = ? AND fecha = ? AND estado = 'Abierto'`,
+      [encargado, turno, hoy]
+    );
+
+    if (active) {
+      active.productos = JSON.parse(active.productos);
+      return res.json(active);
+    }
+
+    // 2. Si no hay de hoy, pero hay uno abierto previo del mismo turno/encargado, recuperarlo
+    active = await db.get(
+      `SELECT * FROM inventories_history 
+       WHERE encargado = ? AND turno = ? AND estado = 'Abierto'
+       ORDER BY fecha DESC, hora DESC LIMIT 1`,
+      [encargado, turno]
+    );
+
+    if (active) {
+      active.productos = JSON.parse(active.productos);
+      return res.json(active);
+    }
+
+    // 3. Crear una nueva sesión de inventario: inicializar items heredando del turno anterior
+    const baseItems = await db.all('SELECT * FROM inventory ORDER BY category ASC, id ASC');
+
+    // Buscar el último inventario cerrado en general para heredar stocks
+    const lastClosed = await db.get(
+      `SELECT productos FROM inventories_history 
+       WHERE estado = 'Cerrado' 
+       ORDER BY fecha DESC, hora DESC LIMIT 1`
+    );
+
+    let stockHeredado: Record<string, number> = {};
+    if (lastClosed) {
+      try {
+        const lastProducts = JSON.parse(lastClosed.productos);
+        lastProducts.forEach((p: any) => {
+          if (p.category === 'cajas_1' || p.category === 'cajas_2') {
+            stockHeredado[p.name] = p.cierre_turno || 0;
+          } else if (p.category === 'acevichado') {
+            stockHeredado[p.name] = p.restante || 0;
+          } else {
+            stockHeredado[p.name] = p.s_final || 0;
+          }
+        });
+      } catch (e) {
+        console.error('Error parseando productos de inventario cerrado anterior:', e);
+      }
+    }
+
+    // Mapear items base
+    const newProducts = baseItems.map((item: any) => {
+      const stockAnterior = stockHeredado[item.name] || 0;
+      
+      const p = {
+        ...item,
+        cajas_desarmadas: item.category.startsWith('cajas') ? stockAnterior : 0,
+        cajas_armadas: 0,
+        s_inicial: !item.category.startsWith('cajas') ? stockAnterior : 0,
+        ingreso: 0,
+        total: stockAnterior,
+        consumido: 0,
+        cierre_turno: item.category.startsWith('cajas') ? stockAnterior : 0,
+        merma: 0,
+        s_final: !item.category.startsWith('cajas') ? stockAnterior : 0,
+        restante: item.category === 'acevichado' ? stockAnterior : 0,
+        produccion: 0,
+        comentarios: ''
+      };
+
+      p.requerimiento = calculateRequerimiento(p.category, p.name, p.total, p.s_final, p.restante);
+      return p;
+    });
+
+    const newUuid = crypto.randomUUID();
+    const ahora = new Date();
+    const horaStr = ahora.toTimeString().split(' ')[0];
+
+    await db.run(
+      `INSERT INTO inventories_history (uuid, fecha, hora, encargado, turno, productos, estado)
+       VALUES (?, ?, ?, ?, ?, ?, 'Abierto')`,
+      [newUuid, hoy, horaStr, encargado, turno, JSON.stringify(newProducts)]
+    );
+
+    const created = {
+      uuid: newUuid,
+      fecha: hoy,
+      hora: horaStr,
+      encargado,
+      turno,
+      productos: newProducts,
+      observaciones: '',
+      estado: 'Abierto'
+    };
+
+    res.json(created);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateActiveInventory = async (req: Request, res: Response) => {
+  const { uuid } = req.params;
+  const { productos, observaciones, estado } = req.body;
+
+  if (!productos) {
+    return res.status(400).json({ error: 'La lista de productos es requerida' });
+  }
+
+  try {
+    const db = await getDb();
+    const current = await db.get('SELECT * FROM inventories_history WHERE uuid = ?', [uuid]);
+    
+    if (!current) {
+      return res.status(404).json({ error: 'Inventario no encontrado' });
+    }
+
+    const nextEstado = estado || current.estado;
+    const nextObservaciones = observaciones !== undefined ? observaciones : current.observaciones;
+
+    await db.run(
+      `UPDATE inventories_history 
+       SET productos = ?, observaciones = ?, estado = ?, updated_at = CURRENT_TIMESTAMP 
+       WHERE uuid = ?`,
+      [JSON.stringify(productos), nextObservaciones, nextEstado, uuid]
+    );
+
+    // Mantener la sincronización con la tabla clásica 'inventory'
+    for (const p of productos) {
+      await db.run(
+        `UPDATE inventory 
+         SET cajas_desarmadas = ?, cajas_armadas = ?, s_inicial = ?, ingreso = ?,
+             total = ?, consumido = ?, cierre_turno = ?, merma = ?, s_final = ?,
+             restante = ?, produccion = ?, requerimiento = ?, comentarios = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE category = ? AND name = ?`,
+        [
+          p.cajas_desarmadas || 0,
+          p.cajas_armadas || 0,
+          p.s_inicial || 0,
+          p.ingreso || 0,
+          p.total || 0,
+          p.consumido || 0,
+          p.cierre_turno || 0,
+          p.merma || 0,
+          p.s_final || 0,
+          p.restante || 0,
+          p.produccion || 0,
+          p.requerimiento || '',
+          p.comentarios || '',
+          p.category,
+          p.name
+        ]
+      );
+    }
+
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const closeActiveInventory = async (req: Request, res: Response) => {
+  const { uuid } = req.params;
+
+  try {
+    const db = await getDb();
+    const current = await db.get('SELECT * FROM inventories_history WHERE uuid = ?', [uuid]);
+    
+    if (!current) {
+      return res.status(404).json({ error: 'Inventario no encontrado' });
+    }
+
+    await db.run(
+      `UPDATE inventories_history SET estado = 'Cerrado', updated_at = CURRENT_TIMESTAMP WHERE uuid = ?`,
+      [uuid]
+    );
+
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getInventoryHistory = async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    const logs = await db.all(
+      `SELECT id, uuid, fecha, hora, encargado, turno, observaciones, estado, created_at, updated_at 
+       FROM inventories_history 
+       ORDER BY fecha DESC, hora DESC, id DESC`
+    );
+    res.json(logs);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getInventoryHistoryDetail = async (req: Request, res: Response) => {
+  const { uuid } = req.params;
+  try {
+    const db = await getDb();
+    const log = await db.get('SELECT * FROM inventories_history WHERE uuid = ?', [uuid]);
+    if (!log) {
+      return res.status(404).json({ error: 'Detalle de inventario no encontrado' });
+    }
+    log.productos = JSON.parse(log.productos);
+    res.json(log);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

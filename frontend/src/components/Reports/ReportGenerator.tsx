@@ -5,7 +5,7 @@
  */
 
 import React, { useRef, useState } from 'react';
-import { useInventory } from '../../context/InventoryContext';
+import { useInventory, type InventoryItem } from '../../context/InventoryContext';
 import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 import * as XLSX from 'xlsx';
@@ -13,13 +13,85 @@ import axios from 'axios';
 import { Download, FileImage, FileText, FileSpreadsheet, Loader2, Check } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 
-export const ReportGenerator: React.FC = () => {
-  const { inventory, stats, criticalItems, responsable } = useInventory();
+interface ReportGeneratorProps {
+  historicalData?: InventoryItem[];
+  historicalMeta?: {
+    encargado: string;
+    turno: string;
+    fecha: string;
+    hora: string;
+  };
+}
+
+const getStatsAndCriticals = (items: InventoryItem[]) => {
+  let suficiente = 0;
+  let medio = 0;
+  let bajo = 0;
+  let critico = 0;
+  let sinStock = 0;
+  
+  const criticals = items.filter((item) => {
+    if (item.category === 'cajas_1' || item.category === 'cajas_2') {
+      return item.total < 50;
+    }
+    if (item.category === 'gaseosas') {
+      return item.total <= 2;
+    }
+    return false;
+  });
+
+  items.forEach((item) => {
+    if (item.category === 'salseros' || item.category === 'acevichado') {
+      return;
+    }
+    const totalVal = item.total;
+    const isCaja = item.category.startsWith('cajas');
+    if (isCaja) {
+      if (totalVal >= 50) suficiente++;
+      else if (totalVal >= 30) medio++;
+      else if (totalVal >= 15) bajo++;
+      else if (totalVal > 0) critico++;
+      else sinStock++;
+    } else {
+      if (totalVal >= 10) suficiente++;
+      else if (totalVal >= 5) medio++;
+      else if (totalVal >= 3) bajo++;
+      else if (totalVal > 0) critico++;
+      else sinStock++;
+    }
+  });
+
+  return {
+    stats: { totalProducts: items.length, suficiente, medio, bajo, critico, sinStock },
+    criticalItems: criticals
+  };
+};
+
+export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
+  historicalData,
+  historicalMeta
+}) => {
+  const { inventory, stats: currentStats, criticalItems: currentCriticals, responsable: currentResponsable, turno: currentTurno } = useInventory();
   const [exporting, setExporting] = useState<string | null>(null);
   const [saveNotification, setSaveNotification] = useState<string | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
 
-  // Obtener fecha y hora actual en formato de nombre de archivo
+  // Seleccionar conjunto de datos a exportar (histórico o actual)
+  const activeData = historicalData || inventory;
+
+  // Calcular stats y criticals en base al conjunto activo
+  const { stats, criticalItems } = historicalData
+    ? getStatsAndCriticals(historicalData)
+    : { stats: currentStats, criticalItems: currentCriticals };
+
+  // Metadatos de la firma del reporte
+  const reportMeta = historicalMeta || {
+    encargado: currentResponsable || 'Responsable',
+    turno: currentTurno || 'No especificado',
+    fecha: new Date().toLocaleDateString('es-PE'),
+    hora: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+  };
+
   const getFormattedDateTime = () => {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -39,7 +111,7 @@ export const ReportGenerator: React.FC = () => {
     setExporting('excel');
     try {
       // 1. Hoja de Inventario Completo
-      const inventoryData = inventory.map(item => ({
+      const inventoryData = activeData.map(item => ({
         Categoria: item.category === 'cajas_1' ? 'Cajas 1er Turno' :
                    item.category === 'cajas_2' ? 'Cajas 2do Turno' :
                    item.category === 'acevichado' ? 'Acevichados' :
@@ -73,23 +145,23 @@ export const ReportGenerator: React.FC = () => {
         { Indicador: 'Stock Bajo / Reposición (Naranja)', Cantidad: stats.bajo },
         { Indicador: 'Stock Crítico (Rojo)', Cantidad: stats.critico },
         { Indicador: 'Sin Stock (Agotado)', Cantidad: stats.sinStock },
-        { Indicador: 'Responsable de Reporte', Cantidad: responsable }
+        { Indicador: 'Responsable de Reporte', Cantidad: reportMeta.encargado },
+        { Indicador: 'Turno de Reporte', Cantidad: reportMeta.turno },
+        { Indicador: 'Fecha del Reporte', Cantidad: reportMeta.fecha },
+        { Indicador: 'Hora de Cierre', Cantidad: reportMeta.hora }
       ];
       const wsSummary = XLSX.utils.json_to_sheet(summaryData);
       XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumen KPIs');
 
-      // Nombre de archivo base
       const { fileName } = getFormattedDateTime();
       const finalFileName = `Inventario_MR_SUSHI_${fileName}.xlsx`;
 
-      // Intentar descarga nativa
       try {
         XLSX.writeFile(wb, finalFileName);
       } catch (e) {
-        console.warn('Descarga nativa bloqueada por sandbox, se procederá con el guardado en servidor.');
+        console.warn('Descarga nativa bloqueada por sandbox, se guardará en el servidor.');
       }
 
-      // Guardar en el disco local
       const base64Data = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
       await axios.post('/api/save-report', {
         fileName: finalFileName,
@@ -288,8 +360,10 @@ export const ReportGenerator: React.FC = () => {
             </div>
             <div className="text-right">
               <span className="inline-block bg-red-50 text-[#E30613] text-xs font-bold uppercase px-3 py-1 rounded-full border border-red-100 mb-2">Reporte Ejecutivo Oficial</span>
-              <p className="text-sm font-medium text-gray-500">Fecha/Hora: <strong className="text-gray-900">{getFormattedDateTime().title}</strong></p>
-              <p className="text-sm font-medium text-gray-500">Responsable: <strong className="text-gray-900">{responsable}</strong></p>
+              <p className="text-sm font-medium text-gray-500">Fecha: <strong className="text-gray-900">{reportMeta.fecha}</strong></p>
+              <p className="text-sm font-medium text-gray-500">Hora: <strong className="text-gray-900">{reportMeta.hora}</strong></p>
+              <p className="text-sm font-medium text-gray-500">Encargado: <strong className="text-gray-900">{reportMeta.encargado}</strong></p>
+              <p className="text-sm font-medium text-gray-500">Turno: <strong className="text-gray-900">{reportMeta.turno}</strong></p>
             </div>
           </div>
 
@@ -369,7 +443,7 @@ export const ReportGenerator: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {inventory.map((item, idx) => {
+                {activeData.map((item, idx) => {
                   const isCaja = item.category.startsWith('cajas');
                   const isAcevichado = item.category === 'acevichado';
                   
@@ -433,12 +507,21 @@ export const ReportGenerator: React.FC = () => {
             </table>
           </div>
 
-          {/* Pie de Página del Reporte */}
-          <div className="border-t border-gray-100 pt-6 mt-8 flex justify-between items-center text-xs text-gray-400">
-            <p>© {new Date().getFullYear()} MR·SUSHI S.A.C. Todos los derechos reservados. Generado por el Sistema Inteligente de Control de Inventario.</p>
-            <div className="flex gap-4">
-              <span className="border-r pr-4">Firma Responsable: __________________________</span>
-              <span>ID Reporte: #REP-{Math.floor(1000 + Math.random() * 9000)}</span>
+          {/* Pie de Página del Reporte Firmado */}
+          <div className="border-t-2 border-gray-200 pt-6 mt-8 flex justify-between items-start text-xs text-gray-400">
+            <div>
+              <p className="font-semibold text-gray-600">© {new Date().getFullYear()} MR·SUSHI S.A.C. Todos los derechos reservados.</p>
+              <p className="text-[10px] text-gray-400 mt-1">Generado por el Sistema Inteligente de Control de Inventario.</p>
+            </div>
+            <div className="flex gap-12 text-gray-800 text-sm font-semibold">
+              <div className="flex flex-col gap-1 border-r border-gray-100 pr-12 text-right">
+                <p>Encargado: <span className="font-extrabold text-red-600">{reportMeta.encargado}</span></p>
+                <p>Turno: <span className="font-extrabold text-red-600">{reportMeta.turno}</span></p>
+              </div>
+              <div className="flex flex-col gap-1 text-right">
+                <p>Fecha: <span className="font-extrabold text-gray-900">{reportMeta.fecha}</span></p>
+                <p>Hora de Cierre: <span className="font-extrabold text-gray-900">{reportMeta.hora}</span></p>
+              </div>
             </div>
           </div>
         </div>

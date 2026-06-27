@@ -173,6 +173,33 @@ export async function initDb() {
     )
   `);
 
+  // Crear tabla de sesiones de usuario
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS user_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      encargado TEXT NOT NULL,
+      turno TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Crear tabla de historial de inventarios (snapshots)
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS inventories_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      uuid TEXT NOT NULL UNIQUE,
+      fecha TEXT NOT NULL,
+      hora TEXT NOT NULL,
+      encargado TEXT NOT NULL,
+      turno TEXT NOT NULL,
+      productos TEXT NOT NULL,
+      observaciones TEXT DEFAULT '',
+      estado TEXT DEFAULT 'Abierto',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Semillero inicial de productos (seeding)
   const initialProducts = [
     // CAJAS 1ER TURNO

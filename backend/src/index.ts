@@ -43,6 +43,10 @@ app.get('*', (req, res) => {
 async function startServer() {
   try {
     await initDb();
+    
+    // Programar el cierre automático diario a las 00:00
+    scheduleMidnightAutoClose();
+
     app.listen(PORT, () => {
       console.log(`[Server] Corriendo en http://localhost:${PORT}`);
     });
@@ -50,6 +54,37 @@ async function startServer() {
     console.error('Error al iniciar el servidor:', error);
     process.exit(1);
   }
+}
+
+// Función para programar el cierre de inventarios a medianoche
+function scheduleMidnightAutoClose() {
+  const now = new Date();
+  const midnight = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + 1, // Siguiente día
+    0, 0, 0, 0 // Exactamente a las 00:00:00
+  );
+  
+  const msToMidnight = midnight.getTime() - now.getTime();
+  console.log(`[AutoClose] Programado cierre automático diario en ${(msToMidnight / 1000 / 60 / 60).toFixed(2)} horas.`);
+  
+  setTimeout(async () => {
+    try {
+      const db = await initDb(); // Obtener BD iniciada
+      const dbInstance = await require('./db/database').getDb();
+      const result = await dbInstance.run(
+        `UPDATE inventories_history 
+         SET estado = 'Cerrado', updated_at = CURRENT_TIMESTAMP 
+         WHERE estado = 'Abierto'`
+      );
+      console.log(`[AutoClose] Cierre automático de medianoche ejecutado. Afectados: ${result.changes || 0}`);
+    } catch (err) {
+      console.error('[AutoClose] Error en ejecución de medianoche:', err);
+    }
+    // Reprogramar para la siguiente medianoche
+    scheduleMidnightAutoClose();
+  }, msToMidnight);
 }
 
 startServer();
