@@ -10,7 +10,7 @@ import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 import * as XLSX from 'xlsx';
 import axios from 'axios';
-import { Download, FileImage, FileText, FileSpreadsheet, Loader2, Check } from 'lucide-react';
+import { Download, FileImage, FileText, FileSpreadsheet, Loader2 } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 
 interface ReportGeneratorProps {
@@ -72,7 +72,7 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
   historicalData,
   historicalMeta
 }) => {
-  const { inventory, stats: currentStats, criticalItems: currentCriticals, responsable: currentResponsable, turno: currentTurno, responsables: currentResponsables } = useInventory();
+  const { inventory, stats: currentStats, responsable: currentResponsable, turno: currentTurno, responsables: currentResponsables } = useInventory();
   const [exporting, setExporting] = useState<string | null>(null);
   const [saveNotification, setSaveNotification] = useState<string | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -80,10 +80,10 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
   // Seleccionar conjunto de datos a exportar (histórico o actual)
   const activeData = historicalData || inventory;
 
-  // Calcular stats y criticals en base al conjunto activo
-  const { stats, criticalItems } = historicalData
-    ? getStatsAndCriticals(historicalData)
-    : { stats: currentStats, criticalItems: currentCriticals };
+  // Calcular stats en base al conjunto activo
+  const stats = historicalData
+    ? getStatsAndCriticals(historicalData).stats
+    : currentStats;
 
   // Metadatos de la firma del reporte
   const reportMeta = historicalMeta || {
@@ -213,10 +213,10 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
       let fileData = imgData;
 
       if (format === 'pdf') {
-        // PDF en formato A4 apaisado o vertical dependiendo de las proporciones del canvas
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgWidth = 210; // A4 ancho en mm
-        const pageHeight = 295; // A4 alto en mm
+        // PDF en formato A4 apaisado (Landscape)
+        const pdf = new jsPDF('l', 'mm', 'a4');
+        const imgWidth = 297; // A4 ancho landscape en mm
+        const pageHeight = 210; // A4 alto landscape en mm
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
         let heightLeft = imgHeight;
         let position = 0;
@@ -346,195 +346,177 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
         </div>
       </div>
 
-      {/* PLANTILLA DE INFORME EJECUTIVO OCULTO (Renderizado fuera del área visible para html2canvas) */}
+      {/* PLANTILLA DE INFORME EJECUTIVO OCULTO (Optimizado para captura A4 Landscape w-1280px) */}
       <div className="absolute left-[-9999px] top-[-9999px]">
         <div
           ref={reportRef}
-          className="w-[1920px] bg-white p-12 flex flex-col justify-between font-sans"
-          style={{ minHeight: '1080px' }}
+          className="w-[1280px] bg-white p-6 flex flex-col justify-between font-sans border border-gray-200 space-y-4"
         >
           {/* Cabecera Corporativa */}
-          <div className="flex justify-between items-center border-b-4 border-[#E30613] pb-8">
-            <div className="flex items-center gap-6">
-              <img src={logoImg} alt="MR SUSHI" className="h-20 object-contain" />
+          <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+            {/* Izquierda: Logo y Texto Marca */}
+            <div className="flex items-center gap-4">
+              <img src={logoImg} alt="MR-SUSHI Logo" className="h-10 w-10 object-contain rounded-lg shrink-0" />
               <div>
-                <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">MR·SUSHI</h1>
-                <p className="text-lg font-bold text-[#E30613] tracking-widest uppercase">Sistema Inteligente de Control de Inventario</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <span className="inline-block bg-red-50 text-[#E30613] text-xs font-bold uppercase px-3 py-1 rounded-full border border-red-100 mb-2">Reporte Ejecutivo Oficial</span>
-              <p className="text-sm font-medium text-gray-500">Fecha: <strong className="text-gray-900">{reportMeta.fecha}</strong></p>
-              <p className="text-sm font-medium text-gray-500">Hora: <strong className="text-gray-900">{reportMeta.hora}</strong></p>
-              <p className="text-sm font-medium text-gray-500">Encargado: <strong className="text-gray-900">{reportMeta.encargado}</strong></p>
-              <p className="text-sm font-medium text-gray-500">Turno: <strong className="text-gray-900">{reportMeta.turno}</strong></p>
-            </div>
-          </div>
-
-          {/* Resumen General KPIs y Productos Críticos */}
-          <div className="grid grid-cols-3 gap-8 my-8">
-            {/* Tarjetas Resumen */}
-            <div className="col-span-1 bg-gray-50 p-6 rounded-3xl border border-gray-100 flex flex-col justify-between">
-              <div>
-                <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Resumen de Stock</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white p-3 rounded-2xl border border-gray-100 text-center">
-                    <span className="text-3xl font-extrabold text-gray-900">{stats.totalProducts}</span>
-                    <p className="text-[10px] uppercase font-bold text-gray-400 mt-1">Productos</p>
-                  </div>
-                  <div className="bg-white p-3 rounded-2xl border border-gray-100 text-center">
-                    <span className="text-3xl font-extrabold text-emerald-600">{stats.suficiente}</span>
-                    <p className="text-[10px] uppercase font-bold text-gray-400 mt-1">Suficientes</p>
-                  </div>
-                  <div className="bg-white p-3 rounded-2xl border border-gray-100 text-center">
-                    <span className="text-3xl font-extrabold text-amber-500">{stats.medio}</span>
-                    <p className="text-[10px] uppercase font-bold text-gray-400 mt-1">Medios</p>
-                  </div>
-                  <div className="bg-white p-3 rounded-2xl border border-gray-100 text-center">
-                    <span className="text-3xl font-extrabold text-orange-500">{stats.bajo}</span>
-                    <p className="text-[10px] uppercase font-bold text-gray-400 mt-1">Bajos</p>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t flex justify-between text-sm">
-                <span className="text-red-600 font-bold">Críticos: {stats.critico}</span>
-                <span className="text-red-900 font-bold">Sin Stock: {stats.sinStock}</span>
+                <h1 className="text-lg font-extrabold text-[#0B1B3D] tracking-tight">MR-SUSHI</h1>
+                <p className="text-[8px] font-bold text-red-600 uppercase tracking-widest leading-none">Sistema Inteligente de Control de Inventario</p>
               </div>
             </div>
 
-            {/* Listado de Compras Críticas Urgentes */}
-            <div className="col-span-2 bg-red-50/30 p-6 rounded-3xl border border-red-100/50 flex flex-col justify-between">
-              <div>
-                <h3 className="text-xl font-bold text-red-800 mb-4 border-b border-red-100 pb-2 flex items-center gap-2">
-                  <Check className="w-5 h-5 text-red-600" />
-                  Compras Requeridas Inmediatas (Stock ≤ 2)
-                </h3>
-                {criticalItems.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 max-h-40 overflow-hidden">
-                    {criticalItems.map((item, idx) => (
-                      <div key={idx} className="flex justify-between items-center text-sm py-1 border-b border-red-100/30">
-                        <span className="font-semibold text-gray-800">{item.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded text-xs">Total: {item.total} {item.measure}</span>
-                          <span className="text-xs font-semibold text-red-800">{item.requerimiento}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-emerald-700 font-semibold my-4">✓ No se registran requerimientos críticos. ¡Inventario al día!</p>
-                )}
-              </div>
-              <p className="text-[11px] text-red-900/60 mt-4 italic">* Los requerimientos se generan de forma automática según la lógica establecida en la base de verdad (Excel).</p>
+            {/* Centro: Título */}
+            <div className="text-center">
+              <h2 className="text-xl font-black text-gray-900 tracking-wider uppercase">REPORTE DE INVENTARIO DIARIO</h2>
             </div>
-          </div>
 
-          {/* Tabla de Inventario Detallada (Agrupada por Categorías principales) */}
-          <div className="space-y-6 flex-grow">
-            <h3 className="text-2xl font-bold text-gray-800 mb-2 border-b pb-2">Tabla Detallada de Inventario</h3>
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-gray-900 text-white uppercase font-bold">
-                  <th className="p-3">Sección</th>
-                  <th className="p-3">Producto</th>
-                  <th className="p-3">Medida</th>
-                  <th className="p-3 text-right">Inicial / Desarmadas</th>
-                  <th className="p-3 text-right">Ingreso / Armadas</th>
-                  <th className="p-3 text-center">TOTAL</th>
-                  <th className="p-3 text-right">Consumo / Producción</th>
-                  <th className="p-3 text-right">Cierre / Stock Final</th>
-                  <th className="p-3">Requerimiento</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {activeData.map((item, idx) => {
-                  const isCaja = item.category.startsWith('cajas');
-                  const isAcevichado = item.category === 'acevichado';
-                  
-                  // Color del total
-                  let colorClass = 'text-gray-900 font-semibold';
-                  if (item.total >= 10) colorClass = 'text-emerald-600 font-bold';
-                  else if (item.total >= 5) colorClass = 'text-amber-500 font-semibold';
-                  else if (item.total >= 3) colorClass = 'text-orange-500 font-semibold';
-                  else colorClass = 'text-red-600 font-bold';
-
-                  return (
-                    <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="p-2 font-bold text-gray-500">
-                        {item.category === 'cajas_1' ? 'Cajas T1' :
-                         item.category === 'cajas_2' ? 'Cajas T2' :
-                         item.category === 'acevichado' ? 'Acevichado' :
-                         item.category === 'salseros' ? 'Salseros' :
-                         item.category === 'utensilios' ? 'Utensilios' : 'Gaseosas'}
-                      </td>
-                      <td className="p-2 font-bold text-gray-900">{item.name}</td>
-                      <td className="p-2 text-gray-400 font-medium">{item.measure}</td>
-                      
-                      {/* Inicial / Desarmadas */}
-                      <td className="p-2 text-right text-gray-700">
-                        {isCaja ? item.cajas_desarmadas : item.s_inicial}
-                      </td>
-                      
-                      {/* Ingreso / Armadas */}
-                      <td className="p-2 text-right text-gray-700">
-                        {isCaja ? item.cajas_armadas : item.ingreso}
-                      </td>
-
-                      {/* TOTAL */}
-                      <td className="p-2 text-center">
-                        <span className={colorClass}>{item.total}</span>
-                      </td>
-
-                      {/* Consumo / Producción */}
-                      <td className="p-2 text-right text-gray-700">
-                        {isCaja ? item.consumido :
-                         isAcevichado ? item.produccion :
-                         item.category === 'salseros' ? item.consumido : '-'}
-                      </td>
-
-                      {/* Cierre / Stock Final */}
-                      <td className="p-2 text-right font-bold text-gray-900">
-                        {isCaja ? item.cierre_turno :
-                         isAcevichado ? item.restante : item.s_final}
-                      </td>
-
-                      {/* Requerimiento */}
-                      <td className="p-2">
-                        <span className={`font-semibold ${item.total <= 2 ? 'text-red-600' : 'text-gray-600'}`}>
-                          {item.requerimiento || 'No requiere'}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pie de Página del Reporte Firmado */}
-          <div className="border-t-2 border-gray-200 pt-6 mt-8 flex flex-col md:flex-row justify-between items-start text-xs text-gray-400 gap-6">
+            {/* Derecha: Número de Reporte */}
             <div>
-              <p className="font-semibold text-gray-600">© {new Date().getFullYear()} MR·SUSHI S.A.C. Todos los derechos reservados.</p>
-              <p className="text-[10px] text-gray-400 mt-1">Generado por el Sistema Inteligente de Control de Inventario acumulado diario.</p>
+              <div className="border border-gray-300 bg-gray-50/50 px-3 py-1 rounded-lg text-xs font-bold text-gray-700 tracking-wider">
+                REPORTE N°: {reportMeta.fecha.replace(/\//g, '-')}-001
+              </div>
             </div>
-            
-            {/* Firmas y responsables por turno */}
-            <div className="flex flex-wrap gap-6 text-gray-800 text-xs font-semibold">
-              <div className="flex flex-col p-3 bg-gray-50 border border-gray-100 rounded-xl min-w-[120px]">
-                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Turno Mañana</span>
-                <span className="text-gray-700 font-bold mt-1 truncate">{reportMeta.responsables?.Mañana?.encargado || 'No registrado'}</span>
-                <span className="text-[10px] text-gray-400 font-semibold">{reportMeta.responsables?.Mañana?.ingreso ? `Ingreso: ${reportMeta.responsables.Mañana.ingreso}` : '-'}</span>
-              </div>
-              <div className="flex flex-col p-3 bg-gray-50 border border-gray-100 rounded-xl min-w-[120px]">
-                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Turno Tarde</span>
-                <span className="text-gray-700 font-bold mt-1 truncate">{reportMeta.responsables?.Tarde?.encargado || 'No registrado'}</span>
-                <span className="text-[10px] text-gray-400 font-semibold">{reportMeta.responsables?.Tarde?.ingreso ? `Ingreso: ${reportMeta.responsables.Tarde.ingreso}` : '-'}</span>
-              </div>
-              <div className="flex flex-col p-3 bg-red-50 border border-red-100 rounded-xl min-w-[140px]">
-                <span className="text-[9px] text-red-500 font-bold uppercase tracking-wider block">Cierre Definitivo</span>
-                <span className="text-red-700 font-bold mt-1 truncate">{reportMeta.encargado} (Turno {reportMeta.turno})</span>
-                <span className="text-[10px] text-red-500 font-semibold">Cierre: {reportMeta.fecha} {reportMeta.hora}</span>
-              </div>
+          </div>
+
+          {/* Barra de Metadatos (Diseño continuo de celdas Excel) */}
+          <div className="grid grid-cols-4 border border-gray-300 rounded-lg overflow-hidden divide-x divide-gray-300 text-xs font-semibold bg-gray-50/50">
+            <div className="py-2 px-4 flex items-center gap-2 text-gray-700">
+              <span className="text-gray-400">📅</span>
+              <span>Fecha:</span>
+              <strong className="text-gray-900 font-bold ml-1">{reportMeta.fecha}</strong>
+            </div>
+            <div className="py-2 px-4 flex items-center gap-2 text-gray-700">
+              <span className="text-gray-400">⏰</span>
+              <span>Hora:</span>
+              <strong className="text-gray-900 font-bold ml-1">{reportMeta.hora}</strong>
+            </div>
+            <div className="py-2 px-4 flex items-center gap-2 text-gray-700">
+              <span className="text-gray-400">👤</span>
+              <span>Responsable:</span>
+              <strong className="text-gray-900 font-bold ml-1 truncate">{reportMeta.encargado}</strong>
+            </div>
+            <div className="py-2 px-4 flex items-center gap-2 text-gray-700">
+              <span className="text-gray-400">👥</span>
+              <span>Turno:</span>
+              <strong className="text-gray-900 font-bold ml-1">{reportMeta.turno}</strong>
+            </div>
+          </div>
+
+          {/* Listado de Tablas Consecutivas en Estructura Excel */}
+          <div className="space-y-4 flex-grow">
+            {[
+              { id: 'cajas_1', label: '1. CAJAS (1ER TURNO)', type: 'cajas' },
+              { id: 'cajas_2', label: '2. CAJAS (2DO TURNO)', type: 'cajas' },
+              { id: 'acevichado', label: '3. PRODUCTOS ACEVICHADO', type: 'acevichado' },
+              { id: 'salseros', label: '4. SALSEROS', type: 'salseros' },
+              { id: 'utensilios', label: '5. UTENSILIOS DE ARMADO', type: 'utensilios' },
+              { id: 'gaseosas', label: '6. GASEOSAS', type: 'gaseosas' }
+            ].map((section) => {
+              // Filtrar productos correspondientes a la sección
+              const sectionItems = activeData.filter(item => {
+                if (section.id.startsWith('cajas')) return item.category === section.id;
+                return item.category === section.id;
+              });
+
+              if (sectionItems.length === 0) return null;
+
+              const isCaja = section.type === 'cajas';
+              const isAcevichado = section.type === 'acevichado';
+
+              return (
+                <div key={section.id} className="space-y-1">
+                  {/* Título de la Sección */}
+                  <h3 className="text-xs font-black text-[#0B1B3D] uppercase tracking-wide">
+                    {section.label}
+                  </h3>
+
+                  {/* Cuadrícula de Tabla Estilo Excel */}
+                  <table className="w-full text-left border-collapse border border-gray-300 text-xs font-medium">
+                    <thead>
+                      <tr className="bg-[#0B1B3D] text-white uppercase font-bold text-[10px]">
+                        <th className="p-1.5 border border-gray-300 pl-3">Producto</th>
+                        <th className="p-1.5 border border-gray-300 text-center w-16">Medida</th>
+                        {isCaja ? (
+                          <>
+                            <th className="p-1.5 border border-gray-300 text-center w-36">S. Inicial (Desarmadas)</th>
+                            <th className="p-1.5 border border-gray-300 text-center w-32">Ingreso (Armadas)</th>
+                            <th className="p-1.5 border border-gray-300 text-center w-20">Total</th>
+                            <th className="p-1.5 border border-gray-300 text-center w-24">Producción</th>
+                            <th className="p-1.5 border border-gray-300 text-center w-20">Restante</th>
+                            <th className="p-1.5 border border-gray-300 text-center w-20">S. Final</th>
+                          </>
+                        ) : (
+                          <>
+                            <th className="p-1.5 border border-gray-300 text-center w-36">S. Inicial</th>
+                            <th className="p-1.5 border border-gray-300 text-center w-32">Ingreso</th>
+                            <th className="p-1.5 border border-gray-300 text-center w-20">Total</th>
+                            <th className="p-1.5 border border-gray-300 text-center w-24">Consumo</th>
+                            <th className="p-1.5 border border-gray-300 text-center w-20">S. Final</th>
+                          </>
+                        )}
+                        <th className="p-1.5 border border-gray-300 text-center w-72">Requerimiento</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white">
+                      {sectionItems.map((item, idx) => {
+                        // Determinar los estilos de requerimiento
+                        const reqVal = item.requerimiento || 'No requiere';
+                        const reqLower = reqVal.toLowerCase();
+                        let reqClass = 'bg-[#2E7D32] text-white';
+                        let reqText = 'No requiere reposición';
+
+                        if (reqLower.includes('urgente') || reqLower.includes('crítico') || reqLower.includes('agotado') || item.total === 0) {
+                          reqClass = 'bg-[#C62828] text-white';
+                          reqText = 'Producto agotado. Requiere reposición inmediata';
+                        } else if (reqLower.includes('comprar') || reqLower.includes('requiere cajas') || reqLower.includes('reposición') || reqLower.includes('bajo')) {
+                          reqClass = 'bg-[#FBC02D] text-gray-900';
+                          reqText = 'Requiere reposición (stock bajo)';
+                        }
+
+                        return (
+                          <tr key={idx} className="hover:bg-gray-50/50">
+                            <td className="p-1 border border-gray-200 pl-3 font-bold text-gray-900">{item.name}</td>
+                            <td className="p-1 border border-gray-200 text-center text-gray-500 font-semibold uppercase">{item.measure}</td>
+                            {isCaja ? (
+                              <>
+                                <td className="p-1 border border-gray-200 text-center text-gray-800 font-medium">{item.cajas_desarmadas}</td>
+                                <td className="p-1 border border-gray-200 text-center text-gray-800 font-medium">{item.cajas_armadas}</td>
+                                <td className="p-1 border border-gray-200 text-center text-gray-900 font-extrabold">{item.total}</td>
+                                <td className="p-1 border border-gray-200 text-center text-gray-800 font-medium">{item.consumido}</td>
+                                <td className="p-1 border border-gray-200 text-center text-gray-800 font-medium">{item.cierre_turno}</td>
+                                <td className="p-1 border border-gray-200 text-center text-gray-900 font-bold">{item.cierre_turno}</td>
+                              </>
+                            ) : (
+                              <>
+                                <td className="p-1 border border-gray-200 text-center text-gray-800 font-medium">{item.s_inicial}</td>
+                                <td className="p-1 border border-gray-200 text-center text-gray-800 font-medium">{item.ingreso}</td>
+                                <td className="p-1 border border-gray-200 text-center text-gray-900 font-extrabold">{item.total}</td>
+                                <td className="p-1 border border-gray-200 text-center text-gray-800 font-medium">
+                                  {isAcevichado ? item.produccion : item.consumido}
+                                </td>
+                                <td className="p-1 border border-gray-200 text-center text-gray-900 font-bold">
+                                  {isAcevichado ? item.restante : item.s_final}
+                                </td>
+                              </>
+                            )}
+                            <td className={`${reqClass} border border-gray-200 text-center font-bold text-[9px] uppercase tracking-wider py-1 px-2`}>
+                              {reqText}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Pie de Página del Reporte Corto */}
+          <div className="border-t border-gray-200 pt-3 flex justify-between items-center text-[9px] text-gray-400 font-semibold uppercase tracking-wider">
+            <div>
+              <span>© {new Date().getFullYear()} MR-SUSHI S.A.C. Todos los derechos reservados.</span>
+            </div>
+            <div>
+              <span>Generado por el Sistema Inteligente de Control de Inventario</span>
             </div>
           </div>
         </div>
