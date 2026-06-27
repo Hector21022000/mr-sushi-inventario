@@ -14,6 +14,132 @@ interface UserData {
   created_at: string;
 }
 
+const UserRow: React.FC<{
+  u: UserData;
+  currentUser: any;
+  onUpdate: (id: number, data: Partial<UserData>) => Promise<void>;
+  onDelete: (id: number) => void;
+}> = ({ u, currentUser, onUpdate, onDelete }) => {
+  const [edited, setEdited] = useState<Partial<UserData>>({
+    role: u.role,
+    status: u.status,
+    area: u.area,
+    turno: u.turno
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Sync si los datos del servidor cambian (ej. al recargar la lista)
+  useEffect(() => {
+    setEdited({ role: u.role, status: u.status, area: u.area, turno: u.turno });
+  }, [u]);
+
+  const hasChanges =
+    edited.role !== u.role ||
+    edited.status !== u.status ||
+    edited.area !== u.area ||
+    edited.turno !== u.turno;
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    await onUpdate(u.id, edited);
+    setIsSaving(false);
+  };
+
+  return (
+    <tr className="hover:bg-gray-50/50 transition-colors">
+      <td className="px-6 py-4">
+        <div className="font-bold text-gray-900 flex items-center gap-2">
+          {u.role === 'superadmin' && <ShieldCheck className="w-4 h-4 text-yellow-500" />}
+          {u.full_name}
+        </div>
+        <div className="text-xs text-gray-400">@{u.username}</div>
+      </td>
+      
+      <td className="px-6 py-4">
+        <select 
+          disabled={currentUser.role !== 'superadmin' || u.id === currentUser.id || isSaving}
+          value={edited.role}
+          onChange={(e) => setEdited({ ...edited, role: e.target.value })}
+          className="bg-transparent border border-gray-200 rounded-lg px-2 py-1 text-sm font-medium focus:ring-2 focus:ring-red-600 focus:outline-none"
+        >
+          <option value="worker">Trabajador</option>
+          <option value="admin">Administrador</option>
+          <option value="superadmin">Superadmin</option>
+        </select>
+      </td>
+
+      <td className="px-6 py-4">
+        <select 
+          disabled={currentUser.role !== 'superadmin' || u.id === currentUser.id || isSaving}
+          value={edited.status}
+          onChange={(e) => setEdited({ ...edited, status: e.target.value })}
+          className={`border rounded-lg px-2 py-1 text-sm font-bold focus:ring-2 focus:outline-none ${
+            edited.status === 'active' ? 'bg-green-50 text-green-700 border-green-200 focus:ring-green-600' :
+            edited.status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-200 focus:ring-orange-600' :
+            'bg-red-50 text-red-700 border-red-200 focus:ring-red-600'
+          }`}
+        >
+          <option value="active">Activa</option>
+          <option value="pending">Pendiente</option>
+          <option value="suspended">Suspendida</option>
+          <option value="deactivated">Desactivada</option>
+        </select>
+      </td>
+
+      <td className="px-6 py-4">
+        <select 
+          disabled={currentUser.role !== 'superadmin' || isSaving}
+          value={edited.area || ''}
+          onChange={(e) => setEdited({ ...edited, area: e.target.value || null })}
+          className="bg-transparent border border-gray-200 rounded-lg px-2 py-1 text-sm font-medium focus:ring-2 focus:ring-red-600 focus:outline-none"
+        >
+          <option value="">(Sin asignar)</option>
+          <option value="Armado">Armado</option>
+          <option value="Barra">Barra</option>
+          <option value="Cocina">Cocina</option>
+        </select>
+      </td>
+
+      <td className="px-6 py-4">
+        <select 
+          disabled={currentUser.role !== 'superadmin' || isSaving}
+          value={edited.turno || ''}
+          onChange={(e) => setEdited({ ...edited, turno: e.target.value || null })}
+          className="bg-transparent border border-gray-200 rounded-lg px-2 py-1 text-sm font-medium focus:ring-2 focus:ring-red-600 focus:outline-none"
+        >
+          <option value="">(Sin asignar)</option>
+          <option value="Mañana">Turno Mañana</option>
+          <option value="Tarde">Turno Tarde</option>
+          <option value="Noche">Turno Noche</option>
+        </select>
+      </td>
+
+      {currentUser.role === 'superadmin' && (
+        <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
+          {hasChanges && (
+            <button 
+              onClick={handleSave}
+              disabled={isSaving}
+              className="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm disabled:opacity-50"
+            >
+              {isSaving ? '...' : 'Guardar'}
+            </button>
+          )}
+          {u.id !== currentUser.id && (
+            <button 
+              onClick={() => onDelete(u.id)}
+              className="p-1.5 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+              title="Eliminar usuario"
+            >
+              <UserX className="w-5 h-5" />
+            </button>
+          )}
+        </td>
+      )}
+    </tr>
+  );
+};
+
 export const UserManagement: React.FC = () => {
   const { user } = useAuth();
   const [users, setUsers] = useState<UserData[]>([]);
@@ -41,7 +167,7 @@ export const UserManagement: React.FC = () => {
   const handleUpdate = async (id: number, data: Partial<UserData>) => {
     try {
       await axios.put(`/api/auth/users/${id}`, data);
-      fetchUsers();
+      await fetchUsers();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Error al actualizar usuario');
     }
@@ -110,88 +236,13 @@ export const UserManagement: React.FC = () => {
               <tr><td colSpan={6} className="text-center py-8 text-gray-400">No hay usuarios registrados.</td></tr>
             ) : (
               users.map((u) => (
-                <tr key={u.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="font-bold text-gray-900 flex items-center gap-2">
-                      {u.role === 'superadmin' && <ShieldCheck className="w-4 h-4 text-yellow-500" />}
-                      {u.full_name}
-                    </div>
-                    <div className="text-xs text-gray-400">@{u.username}</div>
-                  </td>
-                  
-                  <td className="px-6 py-4">
-                    <select 
-                      disabled={user.role !== 'superadmin' || u.id === user.id}
-                      value={u.role}
-                      onChange={(e) => handleUpdate(u.id, { role: e.target.value })}
-                      className="bg-transparent border border-gray-200 rounded-lg px-2 py-1 text-sm font-medium focus:ring-2 focus:ring-red-600 focus:outline-none"
-                    >
-                      <option value="worker">Trabajador</option>
-                      <option value="admin">Administrador</option>
-                      <option value="superadmin">Superadmin</option>
-                    </select>
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <select 
-                      disabled={user.role !== 'superadmin' || u.id === user.id}
-                      value={u.status}
-                      onChange={(e) => handleUpdate(u.id, { status: e.target.value })}
-                      className={`border rounded-lg px-2 py-1 text-sm font-bold focus:ring-2 focus:outline-none ${
-                        u.status === 'active' ? 'bg-green-50 text-green-700 border-green-200 focus:ring-green-600' :
-                        u.status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-200 focus:ring-orange-600' :
-                        'bg-red-50 text-red-700 border-red-200 focus:ring-red-600'
-                      }`}
-                    >
-                      <option value="active">Activa</option>
-                      <option value="pending">Pendiente</option>
-                      <option value="suspended">Suspendida</option>
-                      <option value="deactivated">Desactivada</option>
-                    </select>
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <select 
-                      disabled={user.role !== 'superadmin'}
-                      value={u.area || ''}
-                      onChange={(e) => handleUpdate(u.id, { area: e.target.value || null })}
-                      className="bg-transparent border border-gray-200 rounded-lg px-2 py-1 text-sm font-medium focus:ring-2 focus:ring-red-600 focus:outline-none"
-                    >
-                      <option value="">(Sin asignar)</option>
-                      <option value="Armado">Armado</option>
-                      <option value="Barra">Barra</option>
-                      <option value="Cocina">Cocina</option>
-                    </select>
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <select 
-                      disabled={user.role !== 'superadmin'}
-                      value={u.turno || ''}
-                      onChange={(e) => handleUpdate(u.id, { turno: e.target.value || null })}
-                      className="bg-transparent border border-gray-200 rounded-lg px-2 py-1 text-sm font-medium focus:ring-2 focus:ring-red-600 focus:outline-none"
-                    >
-                      <option value="">(Sin asignar)</option>
-                      <option value="Mañana">Turno Mañana</option>
-                      <option value="Tarde">Turno Tarde</option>
-                      <option value="Noche">Turno Noche</option>
-                    </select>
-                  </td>
-
-                  {user.role === 'superadmin' && (
-                    <td className="px-6 py-4 text-right">
-                      {u.id !== user.id && (
-                        <button 
-                          onClick={() => handleDelete(u.id)}
-                          className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
-                          title="Eliminar usuario"
-                        >
-                          <UserX className="w-5 h-5" />
-                        </button>
-                      )}
-                    </td>
-                  )}
-                </tr>
+                <UserRow 
+                  key={u.id} 
+                  u={u} 
+                  currentUser={user} 
+                  onUpdate={handleUpdate} 
+                  onDelete={handleDelete} 
+                />
               ))
             )}
           </tbody>
