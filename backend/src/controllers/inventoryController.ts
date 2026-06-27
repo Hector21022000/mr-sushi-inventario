@@ -368,7 +368,7 @@ export const getActiveInventory = async (req: Request, res: Response) => {
         consumido: 0,
         cierre_turno: item.category.startsWith('cajas') ? stockAnterior : 0,
         merma: 0,
-        s_final: !item.category.startsWith('cajas') ? stockAnterior : 0,
+        s_final: (item.category === 'utensilios' || item.category === 'gaseosas') ? 0 : (!item.category.startsWith('cajas') ? stockAnterior : 0),
         restante: item.category === 'acevichado' ? stockAnterior : 0,
         produccion: 0,
         comentarios: ''
