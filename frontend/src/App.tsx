@@ -41,7 +41,7 @@ import { useSettings } from './context/SettingsContext';
 
 const AppContent: React.FC = () => {
   const { user, logout, loading: authLoading } = useAuth();
-  const { activeArea, switchArea, closeInventory, isClosedToday, criticalItems, error } = useInventory();
+  const { activeArea, switchArea, closeInventory, reopenInventory, isClosedToday, criticalItems, error, inventory } = useInventory();
   const { settings, loading: settingsLoading } = useSettings();
   
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -143,7 +143,7 @@ const AppContent: React.FC = () => {
             </div>
           </div>
           <button 
-            onClick={() => { closeInventory(); logout(); }}
+            onClick={() => { logout(); }}
             className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 font-bold py-3 px-4 rounded-2xl border border-gray-200 shadow-sm transition-colors text-sm"
           >
             <LogOut className="w-4 h-4" />
@@ -202,7 +202,7 @@ const AppContent: React.FC = () => {
                 <div className="text-[9px] text-gray-500">{user.role.toUpperCase()} • {user.area || 'Sin Área'}</div>
                 <div className="flex flex-col gap-1 pt-1">
                   <button
-                    onClick={() => { closeInventory(); logout(); }}
+                    onClick={() => { logout(); }}
                     className="w-full py-1.5 px-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-[9px] font-bold uppercase flex items-center justify-center gap-1 transition-colors border border-gray-200"
                   >
                     <LogOut className="w-3 h-3" />
@@ -295,9 +295,34 @@ const AppContent: React.FC = () => {
           
           {/* Banner de inventario cerrado */}
           {isClosedToday && (
-            <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl text-sm font-semibold shadow-xs">
-              <CheckCircle2 className="w-5 h-5 text-amber-600 shrink-0" />
-              <span>Este inventario ya ha sido cerrado oficialmente y no admite modificaciones (Modo Consulta).</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl text-sm font-semibold shadow-xs">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-amber-600 shrink-0" />
+                <span>Este inventario ya ha sido cerrado oficialmente y no admite modificaciones (Modo Consulta).</span>
+              </div>
+              <button 
+                onClick={reopenInventory}
+                className="px-4 py-2 bg-white border border-amber-300 text-amber-700 hover:bg-amber-100 rounded-lg text-xs font-bold uppercase transition-colors shrink-0"
+              >
+                Reabrir Inventario
+              </button>
+            </div>
+          )}
+
+          {/* Banner de inventario ABIERTO para cerrarlo manualmente */}
+          {!isClosedToday && activeTab === 'inventory' && inventory.length > 0 && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-sm font-semibold shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></div>
+                <span>El inventario está abierto y registrando cambios. Ciérralo al finalizar tu turno.</span>
+              </div>
+              <button 
+                onClick={closeInventory}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold uppercase transition-colors flex items-center justify-center gap-2 shadow-sm shrink-0"
+              >
+                <LogOut className="w-3 h-3" />
+                Cerrar Inventario Oficialmente
+              </button>
             </div>
           )}
 

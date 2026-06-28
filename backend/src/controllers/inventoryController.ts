@@ -510,6 +510,31 @@ export const closeActiveInventory = async (req: Request, res: Response) => {
   }
 };
 
+export const reopenActiveInventory = async (req: Request, res: Response) => {
+  const { uuid } = req.params;
+
+  try {
+    const db = await getDb();
+    const current = await db.get('SELECT * FROM inventories_history WHERE uuid = ?', [uuid]);
+    
+    if (!current) {
+      return res.status(404).json({ error: 'Inventario no encontrado' });
+    }
+
+    // Marcar como abierto
+    await db.run(
+      `UPDATE inventories_history 
+       SET estado = 'Abierto', updated_at = CURRENT_TIMESTAMP 
+       WHERE uuid = ?`,
+      [uuid]
+    );
+
+    res.json({ success: true, estado: 'Abierto' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const getInventoryHistory = async (req: Request, res: Response) => {
   try {
     const db = await getDb();

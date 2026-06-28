@@ -84,6 +84,7 @@ interface InventoryContextType {
   clearLogs: () => Promise<void>;
   saveActiveInventorySnapshot: () => Promise<void>;
   closeInventory: () => Promise<void>;
+  reopenInventory: () => Promise<void>;
   switchArea: (newArea: string) => Promise<void>;
 }
 
@@ -253,10 +254,25 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       setLoading(true);
       await axios.post(`${API_URL}/inventory/active/${activeInventoryUuid}/close`);
-      logoutUser();
+      setIsClosedToday(true);
     } catch (err) {
       console.error('Error closing active inventory:', err);
       setError('Error al cerrar el inventario.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Reabrir inventario manualmente
+  const reopenInventory = async () => {
+    if (!activeInventoryUuid) return;
+    try {
+      setLoading(true);
+      await axios.post(`${API_URL}/inventory/active/${activeInventoryUuid}/reopen`);
+      setIsClosedToday(false);
+    } catch (err) {
+      console.error('Error reopening active inventory:', err);
+      setError('Error al reabrir el inventario.');
     } finally {
       setLoading(false);
     }
@@ -507,6 +523,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         clearLogs,
         saveActiveInventorySnapshot,
         closeInventory,
+        reopenInventory,
         switchArea
       }}
     >

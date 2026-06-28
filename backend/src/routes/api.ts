@@ -12,6 +12,7 @@ import {
   getActiveInventory,
   updateActiveInventory,
   closeActiveInventory,
+  reopenActiveInventory,
   getInventoryHistory,
   getInventoryHistoryDetail
 } from '../controllers/inventoryController';
@@ -31,6 +32,7 @@ router.post('/sessions', saveSession);
 router.get('/inventory/active', getActiveInventory);
 router.put('/inventory/active/:uuid', updateActiveInventory);
 router.post('/inventory/active/:uuid/close', closeActiveInventory);
+router.post('/inventory/active/:uuid/reopen', reopenActiveInventory);
 
 // Rutas de Historial de Snapshots (Calendario)
 router.get('/inventory/history', getInventoryHistory);
