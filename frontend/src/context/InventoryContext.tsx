@@ -180,7 +180,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       setActiveInventoryUuid(activeRes.data.uuid);
       setActiveInventoryDate(activeRes.data.fecha);
-      setInventory(activeRes.data.productos);
+      setInventory(activeRes.data.productos || []);
       setIsClosedToday(activeRes.data.estado === 'Cerrado');
       setResponsables(activeRes.data.responsables || null);
       
@@ -222,7 +222,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         });
         setActiveInventoryUuid(activeRes.data.uuid);
         setActiveInventoryDate(activeRes.data.fecha);
-        setInventory(activeRes.data.productos);
+        setInventory(activeRes.data.productos || []);
         setIsClosedToday(activeRes.data.estado === 'Cerrado');
         setResponsables(activeRes.data.responsables || null);
       } catch (err) {

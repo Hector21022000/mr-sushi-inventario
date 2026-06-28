@@ -310,7 +310,7 @@ const AppContent: React.FC = () => {
           )}
 
           {/* Banner de inventario ABIERTO para cerrarlo manualmente */}
-          {!isClosedToday && activeTab === 'inventory' && inventory.length > 0 && (
+          {!isClosedToday && activeTab === 'inventory' && (inventory || []).length > 0 && (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-sm font-semibold shadow-xs">
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></div>

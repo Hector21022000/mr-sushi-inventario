@@ -258,7 +258,8 @@ export const InventoryTablesView: React.FC = () => {
 
   // Filtrar items por categoría y búsqueda
   const getFilteredItems = (category: string) => {
-    let items = inventory.filter(item => item.category === category);
+    const safeInventory = inventory || [];
+    let items = safeInventory.filter(item => item?.category === category);
 
     if (searchTerm.trim() !== '') {
       items = items.filter(item =>
@@ -278,7 +279,8 @@ export const InventoryTablesView: React.FC = () => {
   ];
 
   // Comprobar si al menos un producto coincide con la búsqueda
-  const matchesCount = sections.reduce((acc, sec) => acc + getFilteredItems(sec.id).length, 0);
+  const safeSections = sections || [];
+  const matchesCount = safeSections.reduce((acc, sec) => acc + getFilteredItems(sec.id).length, 0);
 
   return (
     <div className="space-y-8">
