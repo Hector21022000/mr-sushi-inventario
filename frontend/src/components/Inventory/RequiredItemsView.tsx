@@ -112,8 +112,7 @@ export const RequiredItemsView: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {criticalItems.map((item) => {
-                  const categoryName = item.category === 'cajas_1' ? 'Cajas 1er Turno' :
-                                       item.category === 'cajas_2' ? 'Cajas 2do Turno' : 'Gaseosas';
+                  const categoryName = item.category === 'cajas_2' ? 'Cajas Makis' : 'Gaseosas';
 
                   return (
                     <tr key={item.id} className="hover:bg-gray-50/30 transition-colors">

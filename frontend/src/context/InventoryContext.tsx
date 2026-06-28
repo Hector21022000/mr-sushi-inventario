@@ -453,7 +453,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     let sinStock = 0;
 
     inventory.forEach((item) => {
-      if (item.category === 'salseros' || item.category === 'acevichado') {
+      if (item.category === 'salseros' || item.category === 'acevichado' || item.category === 'cajas_1') {
         return;
       }
 
@@ -488,7 +488,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Lista en tiempo real de productos requeridos
   const criticalItems = React.useMemo(() => {
     return inventory.filter((item) => {
-      if (item.category === 'cajas_1' || item.category === 'cajas_2') {
+      if (item.category === 'cajas_2') {
         return item.total < 50;
       }
       if (item.category === 'gaseosas') {

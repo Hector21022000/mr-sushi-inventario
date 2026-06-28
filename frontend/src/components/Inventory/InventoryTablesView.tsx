@@ -271,8 +271,7 @@ export const InventoryTablesView: React.FC = () => {
 
   // Obtener items por secciones
   const sections = [
-    { id: 'cajas_1', label: 'PRIMER TURNO (Cajas x Maki)', type: 'cajas' },
-    { id: 'cajas_2', label: 'SEGUNDO TURNO (Cajas x Maki)', type: 'cajas' },
+    { id: 'cajas_2', label: 'CAJAS MAKIS', type: 'cajas' },
     { id: 'salseros', label: 'SALSEROS (Contenedores)', type: 'salseros' },
     { id: 'utensilios', label: 'UTENSILIOS DE ARMADO (Empaque)', type: 'utensilios' },
     { id: 'gaseosas', label: 'GASEOSAS (Bebidas)', type: 'gaseosas' }
