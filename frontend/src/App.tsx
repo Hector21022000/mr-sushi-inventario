@@ -18,6 +18,7 @@ import { UserManagement } from './components/Admin/UserManagement';
 import { FormatManagementView } from './components/Admin/FormatManagementView';
 import { SystemSettingsView } from './components/Admin/SystemSettingsView';
 import { AuditLogView } from './components/Admin/AuditLogView';
+import { UserProfileView } from './components/Auth/UserProfileView';
 import { CriticalSidebarPanel } from './components/Sidebar/CriticalSidebarPanel';
 import { RealTimeClockPanel } from './components/ui/RealTimeClockPanel';
 import { 
@@ -90,6 +91,9 @@ const AppContent: React.FC = () => {
     menuItems.push({ id: 'settings', label: 'Configuración', icon: Settings });
     menuItems.push({ id: 'audit_log', label: 'Seguridad', icon: ShieldCheck });
   }
+
+  // Mi Perfil (para todos)
+  menuItems.push({ id: 'profile', label: 'Mi Perfil', icon: User });
 
   // Filtrado de reportes e historial para trabajadores (opcional, pero la seguridad ya está en backend)
 
@@ -237,6 +241,7 @@ const AppContent: React.FC = () => {
               {activeTab === 'formats' && 'Gestión de Formatos'}
               {activeTab === 'settings' && 'Configuración Global'}
               {activeTab === 'audit_log' && 'Auditoría de Seguridad'}
+              {activeTab === 'profile' && 'Mi Perfil'}
             </h2>
             {/* Logo en Móviles en la Cabecera */}
             <div className="flex lg:hidden items-center gap-2">
@@ -344,6 +349,7 @@ const AppContent: React.FC = () => {
           {activeTab === 'formats' && isSuperadmin && <FormatManagementView />}
           {activeTab === 'settings' && isSuperadmin && <SystemSettingsView />}
           {activeTab === 'audit_log' && isSuperadmin && <AuditLogView />}
+          {activeTab === 'profile' && <UserProfileView />}
         </main>
       </div>
 

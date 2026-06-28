@@ -190,3 +190,44 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const updateProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    const { fullName, password } = req.body;
+    const db = await getDb();
+    const user = await db.get('SELECT * FROM users WHERE id = ?', [userId]);
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    let updatedName = fullName || user.full_name;
+    let updatedPassword = user.password;
+
+    if (password && password.trim() !== '') {
+      updatedPassword = await bcrypt.hash(password, 10);
+    }
+
+    await db.run(
+      'UPDATE users SET full_name = ?, password = ? WHERE id = ?',
+      [updatedName, updatedPassword, userId]
+    );
+
+    await logAudit(req, 'UPDATE_PROFILE', {
+      targetUserId: userId,
+      changes: { full_name: updatedName, password_changed: !!password }
+    });
+
+    res.json({ 
+      message: 'Perfil actualizado exitosamente', 
+      user: { fullName: updatedName } 
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
