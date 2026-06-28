@@ -72,18 +72,17 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
   historicalData,
   historicalMeta
 }) => {
-  const { inventory, stats: currentStats, responsable: currentResponsable, turno: currentTurno, responsables: currentResponsables } = useInventory();
+  const { inventory, responsable: currentResponsable, turno: currentTurno, responsables: currentResponsables } = useInventory();
   const [exporting, setExporting] = useState<string | null>(null);
   const [saveNotification, setSaveNotification] = useState<string | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
 
-  // Seleccionar conjunto de datos a exportar (histórico o actual)
-  const activeData = historicalData || inventory;
+  // Seleccionar conjunto de datos a exportar (histórico o actual) filtrando cajas_1
+  const rawData = historicalData || inventory;
+  const activeData = rawData.filter(item => item.category !== 'cajas_1');
 
-  // Calcular stats en base al conjunto activo
-  const stats = historicalData
-    ? getStatsAndCriticals(historicalData).stats
-    : currentStats;
+  // Calcular stats en base al conjunto activo (sin cajas_1)
+  const stats = getStatsAndCriticals(activeData).stats;
 
   // Metadatos de la firma del reporte
   const reportMeta = historicalMeta || {
@@ -114,8 +113,7 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
     try {
       // 1. Hoja de Inventario Completo
       const inventoryData = activeData.map(item => ({
-        Categoria: item.category === 'cajas_1' ? 'Cajas 1er Turno' :
-                   item.category === 'cajas_2' ? 'Cajas 2do Turno' :
+        Categoria: item.category === 'cajas_2' ? 'Cajas Makis' :
                    item.category === 'acevichado' ? 'Acevichados' :
                    item.category === 'salseros' ? 'Salseros' :
                    item.category === 'utensilios' ? 'Utensilios de Armado' : 'Gaseosas',
@@ -404,11 +402,10 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
           {/* Listado de Tablas Consecutivas en Estructura Excel */}
           <div className="space-y-4 flex-grow mt-4">
             {[
-              { id: 'cajas_1', label: '1. CAJAS (1ER TURNO)', type: 'cajas' },
-              { id: 'cajas_2', label: '2. CAJAS (2DO TURNO)', type: 'cajas' },
-              { id: 'salseros', label: '3. SALSEROS', type: 'salseros' },
-              { id: 'utensilios', label: '4. UTENSILIOS DE ARMADO', type: 'utensilios' },
-              { id: 'gaseosas', label: '5. GASEOSAS', type: 'gaseosas' }
+              { id: 'cajas_2', label: '1. CAJAS MAKIS', type: 'cajas' },
+              { id: 'salseros', label: '2. SALSEROS', type: 'salseros' },
+              { id: 'utensilios', label: '3. UTENSILIOS DE ARMADO', type: 'utensilios' },
+              { id: 'gaseosas', label: '4. GASEOSAS', type: 'gaseosas' }
             ].map((section) => {
               // Filtrar productos correspondientes a la sección
               const sectionItems = activeData.filter(item => item.category === section.id);
