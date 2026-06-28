@@ -57,20 +57,20 @@ const UserRow: React.FC<{
       
       <td className="px-6 py-4">
         <select 
-          disabled={currentUser.role !== 'superadmin' || u.id === currentUser.id || isSaving}
+          disabled={u.id === currentUser.id || isSaving}
           value={edited.role}
           onChange={(e) => setEdited({ ...edited, role: e.target.value })}
           className="bg-transparent border border-gray-200 rounded-lg px-2 py-1 text-sm font-medium focus:ring-2 focus:ring-red-600 focus:outline-none"
         >
           <option value="worker">Trabajador</option>
           <option value="admin">Administrador</option>
-          <option value="superadmin">Superadmin</option>
+          {currentUser.role === 'superadmin' && <option value="superadmin">Superadmin</option>}
         </select>
       </td>
 
       <td className="px-6 py-4">
         <select 
-          disabled={currentUser.role !== 'superadmin' || u.id === currentUser.id || isSaving}
+          disabled={u.id === currentUser.id || isSaving}
           value={edited.status}
           onChange={(e) => setEdited({ ...edited, status: e.target.value })}
           className={`border rounded-lg px-2 py-1 text-sm font-bold focus:ring-2 focus:outline-none ${
@@ -88,7 +88,7 @@ const UserRow: React.FC<{
 
       <td className="px-6 py-4">
         <select 
-          disabled={currentUser.role !== 'superadmin' || isSaving}
+          disabled={isSaving}
           value={edited.area || ''}
           onChange={(e) => setEdited({ ...edited, area: e.target.value || null })}
           className="bg-transparent border border-gray-200 rounded-lg px-2 py-1 text-sm font-medium focus:ring-2 focus:ring-red-600 focus:outline-none"
@@ -102,7 +102,7 @@ const UserRow: React.FC<{
 
       <td className="px-6 py-4">
         <select 
-          disabled={currentUser.role !== 'superadmin' || isSaving}
+          disabled={isSaving}
           value={edited.turno || ''}
           onChange={(e) => setEdited({ ...edited, turno: e.target.value || null })}
           className="bg-transparent border border-gray-200 rounded-lg px-2 py-1 text-sm font-medium focus:ring-2 focus:ring-red-600 focus:outline-none"
@@ -114,28 +114,26 @@ const UserRow: React.FC<{
         </select>
       </td>
 
-      {currentUser.role === 'superadmin' && (
-        <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
-          {hasChanges && (
-            <button 
-              onClick={handleSave}
-              disabled={isSaving}
-              className="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm disabled:opacity-50"
-            >
-              {isSaving ? '...' : 'Guardar'}
-            </button>
-          )}
-          {u.id !== currentUser.id && (
-            <button 
-              onClick={() => onDelete(u.id)}
-              className="p-1.5 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
-              title="Eliminar usuario"
-            >
-              <UserX className="w-5 h-5" />
-            </button>
-          )}
-        </td>
-      )}
+      <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
+        {hasChanges && (
+          <button 
+            onClick={handleSave}
+            disabled={isSaving}
+            className="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm disabled:opacity-50"
+          >
+            {isSaving ? '...' : 'Guardar'}
+          </button>
+        )}
+        {currentUser.role === 'superadmin' && u.id !== currentUser.id && (
+          <button 
+            onClick={() => onDelete(u.id)}
+            className="p-1.5 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+            title="Eliminar usuario"
+          >
+            <UserX className="w-5 h-5" />
+          </button>
+        )}
+      </td>
     </tr>
   );
 };

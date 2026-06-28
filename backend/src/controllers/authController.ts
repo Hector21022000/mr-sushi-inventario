@@ -106,7 +106,13 @@ export const login = async (req: Request, res: Response) => {
 export const getUsers = async (req: AuthRequest, res: Response) => {
   try {
     const db = await getDb();
-    const users = await db.all('SELECT id, full_name, username, status, role, area, turno, created_at, last_login FROM users');
+    let users = await db.all('SELECT id, full_name, username, status, role, area, turno, created_at, last_login FROM users');
+    
+    // Si el usuario que solicita es admin, ocultar a los superadmins
+    if (req.user?.role === 'admin') {
+      users = users.filter((u: any) => u.role !== 'superadmin');
+    }
+    
     res.json(users);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -130,9 +136,9 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Acción no permitida contra un superadministrador' });
     }
 
-    // Solo el Superadmin puede asignar rol de Admin o Superadmin
-    if (req.user?.role !== 'superadmin' && (role === 'admin' || role === 'superadmin')) {
-      return res.status(403).json({ error: 'Acción no permitida' });
+    // Solo el Superadmin puede asignar rol de Superadmin
+    if (req.user?.role !== 'superadmin' && role === 'superadmin') {
+      return res.status(403).json({ error: 'Solo el superadministrador puede asignar el rol de superadmin' });
     }
 
     await db.run(
